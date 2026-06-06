@@ -87,7 +87,9 @@ function sanitizeAnalysis(raw) {
   };
 
   const cleanArray = (val, def = []) => {
-    return Array.isArray(val) ? val.filter(item => typeof item === 'string') : def;
+    if (!Array.isArray(val)) return def;
+    const filtered = val.filter(item => typeof item === 'string' && item.trim().length > 0);
+    return filtered.length > 0 ? filtered : def;
   };
 
   // 1. Engineering Review
@@ -252,17 +254,24 @@ async function queryGemini(promptText, schemaText) {
   const groqKey = process.env.GROQ_API_KEY;
   if (groqKey) {
     const groqModels = [
-      // Small fast model — truncate prompt heavily to stay under 6000 TPM
-      { id: 'llama-3.1-8b-instant', maxChars: 5000 },
+      // Small fast model — raise limit so schema at end of prompt isn't truncated
+      { id: 'llama-3.1-8b-instant', maxChars: 8000 },
       // Large model — higher TPD limit but may be exhausted  
       { id: 'llama-3.3-70b-versatile', maxChars: 18000 },
     ];
 
     for (const { id: groqModel, maxChars } of groqModels) {
       try {
-        const groqPrompt = finalPrompt.length > maxChars
-          ? finalPrompt.slice(0, maxChars) + '\n[...content truncated for token limits. Provide best-effort JSON analysis based on above context.]'
-          : finalPrompt;
+        // Smart truncation: trim the MIDDLE (repo file tree / source files), keep schema + instructions intact
+        let groqPrompt = finalPrompt;
+        if (finalPrompt.length > maxChars) {
+          // Keep the first 3000 chars (schema/instructions) + last 2000 chars (tail end of data)
+          const keepHead = Math.floor(maxChars * 0.6);
+          const keepTail = maxChars - keepHead;
+          groqPrompt = finalPrompt.slice(0, keepHead) +
+            '\n[...repository content truncated for token limits...]\n' +
+            finalPrompt.slice(-keepTail);
+        }
 
         console.log(`Attempting Groq (${groqModel}, ${groqPrompt.length} chars)...`);
         const response = await axios.post(

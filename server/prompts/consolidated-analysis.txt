@@ -1,4 +1,84 @@
-You are a senior engineering auditor and recruiter. Analyze the following public repository data:
+You are a senior engineering auditor and recruiter AI. Analyze the repository data provided and return a comprehensive JSON analysis.
+
+REQUIRED OUTPUT SCHEMA (return ALL fields, no exceptions):
+{
+  "engineeringReview": {
+    "engineeringScore": number (0-100),
+    "subscores": {
+      "architecture": number (0-100),
+      "maintainability": number (0-100),
+      "scalability": number (0-100),
+      "codeOrganization": number (0-100)
+    },
+    "strengths": [string, string, string],
+    "weaknesses": [string, string, string],
+    "recommendations": [string, string, string]
+  },
+  "documentationAudit": {
+    "documentationScore": number (0-100),
+    "presentSections": [string],
+    "missingSections": [string],
+    "recommendations": [string, string, string]
+  },
+  "resumeGenerator": {
+    "bullets": [string, string, string]
+  },
+  "interviewPrep": {
+    "questions": [
+      {
+        "id": "q1",
+        "category": "Technical Questions",
+        "question": string,
+        "difficulty": "Advanced" | "Intermediate" | "Beginner",
+        "suggestedTalkingPoints": [string, string, string]
+      },
+      {
+        "id": "q2",
+        "category": "Project-Specific Questions",
+        "question": string,
+        "difficulty": "Advanced" | "Intermediate" | "Beginner",
+        "suggestedTalkingPoints": [string, string, string]
+      },
+      {
+        "id": "q3",
+        "category": "Deep-Dive Follow-Up Questions",
+        "question": string,
+        "difficulty": "Advanced" | "Intermediate" | "Beginner",
+        "suggestedTalkingPoints": [string, string, string]
+      }
+    ]
+  },
+  "employabilityScore": {
+    "overallEmployabilityScore": number (0-100),
+    "subscores": {
+      "technicalDepth": number (0-100),
+      "documentationQuality": number (0-100),
+      "portfolioPresentation": number (0-100),
+      "projectComplexity": number (0-100),
+      "professionalReadiness": number (0-100)
+    },
+    "strengths": [string, string, string],
+    "improvementAreas": [string, string, string]
+  },
+  "roadmapGenerator": {
+    "tasks": [
+      {
+        "title": string,
+        "priority": "High" | "Medium" | "Low",
+        "actionableSteps": [string, string, string],
+        "timeline": "Days 1-5" | "Days 6-15" | "Days 16-30",
+        "expectedOutcome": string
+      }
+    ]
+  },
+  "recruiterSnapshot": {
+    "recommendedRoles": [string, string, string, string],
+    "technicalMaturity": "Beginner" | "Intermediate" | "Advanced",
+    "strongestSkills": [string, string, string, string, string]
+  }
+}
+
+REPOSITORY DATA TO ANALYZE:
 
 Repository Name: {{repoName}}
 Description: {{description}}
@@ -13,80 +93,11 @@ README.md File:
 Sample Source Files:
 {{sourceFiles}}
 
-Perform a comprehensive review and output a single JSON object with the following schema:
-{
-  "engineeringReview": {
-    "engineeringScore": number (0-100),
-    "subscores": {
-      "architecture": number (0-100),
-      "maintainability": number (0-100),
-      "scalability": number (0-100),
-      "codeOrganization": number (0-100)
-    },
-    "strengths": [string (3 items list explaining design/code organization strengths)],
-    "weaknesses": [string (3 items list explaining architecture/code coupling/tests issues)],
-    "recommendations": [string (3 items list of refactoring tasks)]
-  },
-  "documentationAudit": {
-    "documentationScore": number (0-100),
-    "presentSections": [string (sections found in README, e.g. "Project Overview", "Installation Guide", etc.)],
-    "missingSections": [string (standard README sections missing)],
-    "recommendations": [string (actionable README guidelines tasks)]
-  },
-  "resumeGenerator": {
-    "bullets": [string (3 action-oriented resume bullet points highlighting technical highlights of this repository following ATS standards)]
-  },
-  "interviewPrep": {
-    "questions": [
-      {
-        "id": "q1",
-        "category": "Technical Questions",
-        "question": "string",
-        "difficulty": "Advanced" | "Intermediate" | "Beginner",
-        "suggestedTalkingPoints": [string (key discussion bullets)]
-      },
-      {
-        "id": "q2",
-        "category": "Project-Specific Questions",
-        "question": "string",
-        "difficulty": "Advanced" | "Intermediate" | "Beginner",
-        "suggestedTalkingPoints": [string (key discussion bullets)]
-      },
-      {
-        "id": "q3",
-        "category": "Deep-Dive Follow-Up Questions",
-        "question": "string",
-        "difficulty": "Advanced" | "Intermediate" | "Beginner",
-        "suggestedTalkingPoints": [string (key discussion bullets)]
-      }
-    ]
-  },
-  "employabilityScore": {
-    "overallEmployabilityScore": number (0-100),
-    "subscores": {
-      "technicalDepth": number (0-100),
-      "documentationQuality": number (0-100),
-      "portfolioPresentation": number (0-100),
-      "projectComplexity": number (0-100),
-      "professionalReadiness": number (0-100)
-    },
-    "strengths": [string (strengths list)],
-    "improvementAreas": [string (areas of improvement list)]
-  },
-  "roadmapGenerator": {
-    "tasks": [
-      {
-        "title": "string",
-        "priority": "High" | "Medium" | "Low",
-        "actionableSteps": [string],
-        "timeline": "Days 1-5" | "Days 6-15" | "Days 16-30",
-        "expectedOutcome": "string"
-      }
-    ]
-  },
-  "recruiterSnapshot": {
-    "recommendedRoles": [string (up to 4 matching roles based on tech stack, e.g. "Junior Frontend Developer", "API Engineer Intern", etc.)],
-    "technicalMaturity": "Beginner" | "Intermediate" | "Advanced",
-    "strongestSkills": [string (up to 5 key skills/tools found in codebase, e.g. "React", "State Management", "REST APIs", etc.)]
-  }
-}
+INSTRUCTIONS:
+- engineeringReview.strengths: 3 specific strengths about code/design quality
+- engineeringReview.weaknesses: 3 specific issues to fix
+- resumeGenerator.bullets: 3 ATS-ready bullet points starting with action verbs
+- recruiterSnapshot.recommendedRoles: 4 matching job roles (e.g. "Junior Frontend Developer", "React Engineer", "Fullstack Developer")
+- recruiterSnapshot.strongestSkills: 5 specific tech skills found (e.g. "React", "Node.js", "REST APIs", "TypeScript", "CSS")
+- recruiterSnapshot.technicalMaturity: assess if "Beginner", "Intermediate", or "Advanced"
+- roadmapGenerator.tasks: at least 3 improvement tasks with concrete steps
