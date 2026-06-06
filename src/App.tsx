@@ -374,8 +374,8 @@ function App() {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     pointSeries.bullets.push((root: any, _series: any, dataItem: any) => {
-      const repo = dataItem.dataContext;
-      const isOwner = repo.isOwner || (repo.loc && repo.loc.includes("Owner Repository"));
+      const repo = dataItem.dataContext || {};
+      const isOwner = !!(repo.isOwner || (repo.loc && typeof repo.loc === 'string' && repo.loc.includes("Owner Repository")));
       const colorHex = isOwner ? 0xdb2777 : 0x0891b2;
       const ringColor = isOwner ? 0xec4899 : 0x06b6d4;
 
@@ -461,7 +461,9 @@ function App() {
         lon: repo.lon,
         name: repo.name,
         loc: repo.loc,
-        url: repo.url
+        url: repo.url,
+        owner: repo.owner,
+        isOwner: repo.isOwner
       };
     });
     pointSeries.data.setAll(mapData);
