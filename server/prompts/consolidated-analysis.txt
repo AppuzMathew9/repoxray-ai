@@ -1,103 +1,158 @@
-You are a senior engineering auditor and recruiter AI. Analyze the repository data provided and return a comprehensive JSON analysis.
+You are a senior software engineering auditor and technical recruiter AI. Your job is to deeply analyze the SPECIFIC repository provided and generate a highly tailored, accurate assessment — NOT generic advice.
 
-REQUIRED OUTPUT SCHEMA (return ALL fields, no exceptions):
+CRITICAL RULES:
+- Every insight MUST reference specific files, technologies, or patterns found in THIS repository
+- Do NOT use generic phrases like "improve error handling" or "add tests" without referencing the specific codebase
+- strengths/weaknesses must be about what you actually see in the file tree and source code
+- recruitedRoles and strongestSkills must reflect the ACTUAL tech stack visible in the files
+- resume bullets must mention SPECIFIC technologies, frameworks, or architectural decisions visible in the code
+
+REQUIRED OUTPUT — Return ALL fields as a single raw JSON object (no markdown, no code fences):
 {
   "engineeringReview": {
-    "engineeringScore": number (0-100),
+    "engineeringScore": <number 0-100 based on actual code quality observed>,
     "subscores": {
-      "architecture": number (0-100),
-      "maintainability": number (0-100),
-      "scalability": number (0-100),
-      "codeOrganization": number (0-100)
+      "architecture": <number 0-100>,
+      "maintainability": <number 0-100>,
+      "scalability": <number 0-100>,
+      "codeOrganization": <number 0-100>
     },
-    "strengths": [string, string, string],
-    "weaknesses": [string, string, string],
-    "recommendations": [string, string, string]
+    "strengths": [
+      "<Specific strength about THIS repo — name actual files/patterns/tech used>",
+      "<Another specific strength — reference actual folder structure or code organization>",
+      "<Third specific strength — mention specific libraries, design choices, or implementations>"
+    ],
+    "weaknesses": [
+      "<Specific weakness in THIS codebase — reference specific missing tests/files/patterns>",
+      "<Another weakness — name specific coupling issues or missing configurations seen in tree>",
+      "<Third weakness — name specific documentation gaps or architectural risks>"
+    ],
+    "recommendations": [
+      "<Concrete actionable task specific to this tech stack and codebase>",
+      "<Second concrete recommendation referencing specific files or patterns to refactor>",
+      "<Third recommendation with specific steps for this particular project>"
+    ]
   },
   "documentationAudit": {
-    "documentationScore": number (0-100),
-    "presentSections": [string],
-    "missingSections": [string],
-    "recommendations": [string, string, string]
+    "documentationScore": <number 0-100>,
+    "presentSections": [<list of README sections actually found in the provided README content>],
+    "missingSections": [<list of standard sections NOT found in the README>],
+    "recommendations": [
+      "<Specific README improvement for THIS project>",
+      "<Second specific documentation task>",
+      "<Third specific documentation improvement>"
+    ]
   },
   "resumeGenerator": {
-    "bullets": [string, string, string]
+    "bullets": [
+      "Built <specific feature/system> using <specific tech from this repo>, achieving <specific outcome>",
+      "Engineered <specific component> with <specific pattern/library found in codebase> to solve <specific problem>",
+      "Implemented <specific integration/API/feature visible in files> enabling <specific capability>"
+    ]
   },
   "interviewPrep": {
     "questions": [
       {
         "id": "q1",
         "category": "Technical Questions",
-        "question": string,
-        "difficulty": "Advanced" | "Intermediate" | "Beginner",
-        "suggestedTalkingPoints": [string, string, string]
+        "question": "<Question specifically about architecture or tech choices visible in THIS repo>",
+        "difficulty": "Intermediate",
+        "suggestedTalkingPoints": ["<Point about specific design decision>", "<Point about specific library choice>", "<Point about specific implementation>"]
       },
       {
         "id": "q2",
         "category": "Project-Specific Questions",
-        "question": string,
-        "difficulty": "Advanced" | "Intermediate" | "Beginner",
-        "suggestedTalkingPoints": [string, string, string]
+        "question": "<Question about a specific feature, integration, or challenge unique to THIS project>",
+        "difficulty": "Advanced",
+        "suggestedTalkingPoints": ["<Specific talking point>", "<Specific talking point>", "<Specific talking point>"]
       },
       {
         "id": "q3",
         "category": "Deep-Dive Follow-Up Questions",
-        "question": string,
-        "difficulty": "Advanced" | "Intermediate" | "Beginner",
-        "suggestedTalkingPoints": [string, string, string]
+        "question": "<Deep technical question about scalability or optimization specific to this codebase>",
+        "difficulty": "Advanced",
+        "suggestedTalkingPoints": ["<Specific talking point>", "<Specific talking point>", "<Specific talking point>"]
       }
     ]
   },
   "employabilityScore": {
-    "overallEmployabilityScore": number (0-100),
+    "overallEmployabilityScore": <number 0-100>,
     "subscores": {
-      "technicalDepth": number (0-100),
-      "documentationQuality": number (0-100),
-      "portfolioPresentation": number (0-100),
-      "projectComplexity": number (0-100),
-      "professionalReadiness": number (0-100)
+      "technicalDepth": <number 0-100>,
+      "documentationQuality": <number 0-100>,
+      "portfolioPresentation": <number 0-100>,
+      "projectComplexity": <number 0-100>,
+      "professionalReadiness": <number 0-100>
     },
-    "strengths": [string, string, string],
-    "improvementAreas": [string, string, string]
+    "strengths": [
+      "<Specific portfolio strength visible in this repo>",
+      "<Another specific strength for hiring>",
+      "<Third specific hiring strength>"
+    ],
+    "improvementAreas": [
+      "<Specific improvement needed for job market readiness>",
+      "<Second specific improvement>",
+      "<Third specific improvement>"
+    ]
   },
   "roadmapGenerator": {
     "tasks": [
       {
-        "title": string,
-        "priority": "High" | "Medium" | "Low",
-        "actionableSteps": [string, string, string],
-        "timeline": "Days 1-5" | "Days 6-15" | "Days 16-30",
-        "expectedOutcome": string
+        "title": "<Specific improvement task name for THIS repo>",
+        "priority": "High",
+        "actionableSteps": [
+          "<Step 1 specific to this codebase>",
+          "<Step 2 with specific tool/file references>",
+          "<Step 3 concrete and actionable>"
+        ],
+        "timeline": "Days 1-5",
+        "expectedOutcome": "<Specific measurable outcome for this project>"
+      },
+      {
+        "title": "<Second specific improvement task>",
+        "priority": "Medium",
+        "actionableSteps": ["<Step 1>", "<Step 2>", "<Step 3>"],
+        "timeline": "Days 6-15",
+        "expectedOutcome": "<Specific measurable outcome>"
+      },
+      {
+        "title": "<Third specific improvement task>",
+        "priority": "Low",
+        "actionableSteps": ["<Step 1>", "<Step 2>", "<Step 3>"],
+        "timeline": "Days 16-30",
+        "expectedOutcome": "<Specific measurable outcome>"
       }
     ]
   },
   "recruiterSnapshot": {
-    "recommendedRoles": [string, string, string, string],
-    "technicalMaturity": "Beginner" | "Intermediate" | "Advanced",
-    "strongestSkills": [string, string, string, string, string]
+    "recommendedRoles": [
+      "<Specific role matching the PRIMARY language/framework of this repo>",
+      "<Second role matching the tech stack>",
+      "<Third role matching secondary skills visible>",
+      "<Fourth role based on project complexity and domain>"
+    ],
+    "technicalMaturity": "<Beginner|Intermediate|Advanced based on actual code complexity>",
+    "strongestSkills": [
+      "<Primary language/framework actually used in this repo>",
+      "<Second actual technology found in dependencies or files>",
+      "<Third actual skill visible in the codebase>",
+      "<Fourth actual tool or pattern used>",
+      "<Fifth actual skill demonstrated>"
+    ]
   }
 }
 
 REPOSITORY DATA TO ANALYZE:
 
-Repository Name: {{repoName}}
+Repository: {{repoName}}
 Description: {{description}}
-Languages: {{languages}}
+Primary Language: {{languages}}
 
-File Tree Structure:
+File Tree:
 {{fileTree}}
 
-README.md File:
+README Content:
 {{readme}}
 
-Sample Source Files:
+Key Source Files:
 {{sourceFiles}}
-
-INSTRUCTIONS:
-- engineeringReview.strengths: 3 specific strengths about code/design quality
-- engineeringReview.weaknesses: 3 specific issues to fix
-- resumeGenerator.bullets: 3 ATS-ready bullet points starting with action verbs
-- recruiterSnapshot.recommendedRoles: 4 matching job roles (e.g. "Junior Frontend Developer", "React Engineer", "Fullstack Developer")
-- recruiterSnapshot.strongestSkills: 5 specific tech skills found (e.g. "React", "Node.js", "REST APIs", "TypeScript", "CSS")
-- recruiterSnapshot.technicalMaturity: assess if "Beginner", "Intermediate", or "Advanced"
-- roadmapGenerator.tasks: at least 3 improvement tasks with concrete steps
