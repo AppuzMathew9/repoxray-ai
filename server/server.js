@@ -254,8 +254,8 @@ async function queryGemini(promptText, schemaText) {
   const groqKey = process.env.GROQ_API_KEY;
   if (groqKey) {
     const groqModels = [
-      // Small fast model — raise limit so schema at end of prompt isn't truncated
-      { id: 'llama-3.1-8b-instant', maxChars: 8000 },
+      // Small fast model — 5500 chars stays safely under 6000 TPM limit
+      { id: 'llama-3.1-8b-instant', maxChars: 5500 },
       // Large model — higher TPD limit but may be exhausted  
       { id: 'llama-3.3-70b-versatile', maxChars: 18000 },
     ];
@@ -373,6 +373,11 @@ async function queryGemini(promptText, schemaText) {
   throw new Error('All responsive LLM providers failed or were offline. Groq rate limits exceeded and local models are not running.');
 }
 
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), port: PORT });
+});
 
 // Main Analyze Endpoint
 app.post('/api/analyze', async (req, res) => {
