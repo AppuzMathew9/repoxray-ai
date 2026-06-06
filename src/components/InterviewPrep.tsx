@@ -8,8 +8,16 @@ interface Props {
 }
 
 export const InterviewPrep: React.FC<Props> = ({ data, searchQuery = '' }) => {
-  const { questions } = data.analysis.interviewPrep;
+  const questions = data.analysis?.interviewPrep?.questions ?? [];
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  if (!data.analysis?.interviewPrep) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-400 text-sm font-semibold">
+        <span>Interview prep data is unavailable. Please try scanning again.</span>
+      </div>
+    );
+  }
 
   const filteredQuestions = questions.filter(q => 
     q.question.toLowerCase().includes(searchQuery.toLowerCase()) || 

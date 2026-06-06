@@ -915,13 +915,13 @@ function App() {
 
                 {/* Dashboard Inner Views */}
                 <div className="min-h-[500px]">
-                  {activeTab === 'overview' && <DashboardOverview data={report} searchQuery={searchQuery} />}
-                  {activeTab === 'engineering' && <EngineeringReview data={report} searchQuery={searchQuery} />}
-                  {activeTab === 'documentation' && <DocumentationAudit data={report} searchQuery={searchQuery} />}
-                  {activeTab === 'resume' && <ResumeGenerator data={report} searchQuery={searchQuery} />}
-                  {activeTab === 'interview' && <InterviewPrep data={report} searchQuery={searchQuery} />}
-                  {activeTab === 'roadmap' && <ImprovementRoadmap data={report} searchQuery={searchQuery} />}
-                  {activeTab === 'recruiter' && <RecruiterSnapshot data={report} searchQuery={searchQuery} />}
+                  {report && activeTab === 'overview' && <DashboardOverview data={report} searchQuery={searchQuery} />}
+                  {report && activeTab === 'engineering' && <EngineeringReview data={report} searchQuery={searchQuery} />}
+                  {report && activeTab === 'documentation' && <DocumentationAudit data={report} searchQuery={searchQuery} />}
+                  {report && activeTab === 'resume' && <ResumeGenerator data={report} searchQuery={searchQuery} />}
+                  {report && activeTab === 'interview' && <InterviewPrep data={report} searchQuery={searchQuery} />}
+                  {report && activeTab === 'roadmap' && <ImprovementRoadmap data={report} searchQuery={searchQuery} />}
+                  {report && activeTab === 'recruiter' && <RecruiterSnapshot data={report} searchQuery={searchQuery} />}
                 </div>
 
               </div>

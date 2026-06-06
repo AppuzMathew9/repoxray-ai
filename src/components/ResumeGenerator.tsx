@@ -8,8 +8,16 @@ interface Props {
 }
 
 export const ResumeGenerator: React.FC<Props> = ({ data, searchQuery = '' }) => {
-  const { bullets } = data.analysis.resumeGenerator;
+  const bullets = data.analysis?.resumeGenerator?.bullets ?? [];
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+
+  if (!data.analysis?.resumeGenerator) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-400 text-sm font-semibold">
+        <span>Resume data is unavailable. Please try scanning again.</span>
+      </div>
+    );
+  }
 
   const filteredBullets = bullets.filter(b => 
     b.toLowerCase().includes(searchQuery.toLowerCase())

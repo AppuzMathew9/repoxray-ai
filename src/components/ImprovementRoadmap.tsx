@@ -8,7 +8,15 @@ interface Props {
 }
 
 export const ImprovementRoadmap: React.FC<Props> = ({ data, searchQuery = '' }) => {
-  const { tasks } = data.analysis.roadmapGenerator;
+  const tasks = data.analysis?.roadmapGenerator?.tasks ?? [];
+
+  if (!data.analysis?.roadmapGenerator) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-400 text-sm font-semibold">
+        <span>Roadmap data is unavailable. Please try scanning again.</span>
+      </div>
+    );
+  }
 
   const filteredTasks = tasks.filter(t => 
     t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 

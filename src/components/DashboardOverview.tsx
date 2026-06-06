@@ -24,6 +24,15 @@ export const DashboardOverview: React.FC<Props> = ({ data, searchQuery = '' }) =
     }
   }, []);
 
+  // Guard: if analysis sections are missing, show a graceful fallback
+  if (!analysis?.engineeringReview || !analysis?.roadmapGenerator) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-400 text-sm font-semibold">
+        <span>Analysis data is loading or unavailable. Please try scanning again.</span>
+      </div>
+    );
+  }
+
   // Compute filtered items dynamically
   const filteredStrengths = (analysis.engineeringReview.strengths || []).filter(
     str => !searchQuery || str.toLowerCase().includes(searchQuery.toLowerCase())

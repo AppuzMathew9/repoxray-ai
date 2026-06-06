@@ -22,11 +22,20 @@ export const EngineeringReview: React.FC<Props> = ({ data, searchQuery = '' }) =
     }
   }, []);
 
+  // Guard: if analysis section is missing, show a graceful fallback
+  if (!engineeringReview) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-400 text-sm font-semibold">
+        <span>Engineering review data is unavailable. Please try scanning again.</span>
+      </div>
+    );
+  }
+
   const subscoreDetails = [
-    { name: 'Architecture', val: engineeringReview.subscores.architecture, icon: Layers, desc: 'Clean separation of concerns, pattern consistency' },
-    { name: 'Maintainability', val: engineeringReview.subscores.maintainability, icon: ShieldCheck, desc: 'Formatting rules, ease of extensions, readability' },
-    { name: 'Scalability', val: engineeringReview.subscores.scalability, icon: Compass, desc: 'Async payload safety and API request loops' },
-    { name: 'Organization', val: engineeringReview.subscores.codeOrganization, icon: Award, desc: 'Folder structure and modular design imports' },
+    { name: 'Architecture', val: engineeringReview.subscores?.architecture ?? 0, icon: Layers, desc: 'Clean separation of concerns, pattern consistency' },
+    { name: 'Maintainability', val: engineeringReview.subscores?.maintainability ?? 0, icon: ShieldCheck, desc: 'Formatting rules, ease of extensions, readability' },
+    { name: 'Scalability', val: engineeringReview.subscores?.scalability ?? 0, icon: Compass, desc: 'Async payload safety and API request loops' },
+    { name: 'Organization', val: engineeringReview.subscores?.codeOrganization ?? 0, icon: Award, desc: 'Folder structure and modular design imports' },
   ];
 
   return (

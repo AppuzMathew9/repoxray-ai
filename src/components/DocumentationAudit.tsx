@@ -30,6 +30,15 @@ export const DocumentationAudit: React.FC<Props> = ({ data, searchQuery = '' }) 
     }
   }, []);
 
+  // Guard: if analysis section is missing, show a graceful fallback
+  if (!documentationAudit) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-400 text-sm font-semibold">
+        <span>Documentation audit data is unavailable. Please try scanning again.</span>
+      </div>
+    );
+  }
+
   const docSections = [
     'Project Overview',
     'Installation Guide',
