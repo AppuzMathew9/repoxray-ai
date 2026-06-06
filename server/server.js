@@ -122,14 +122,16 @@ app.post('/api/generate-readme', asyncHandler(async (req, res, next) => {
 Description: ${repoMeta.description || 'No description provided.'}
 Primary Language: ${repoMeta.language || 'Unknown'}
 
-Your generated README.md MUST include the following structured sections:
+Your generated README.md MUST include the following structured sections with the EXACT headings specified below:
 1. # ${repoMeta.name} (Include a short, punchy, professional description)
-2. ## ✨ Features (Highlight 4 key capabilities using emojis)
-3. ## 🛠️ Tech Stack (List primary languages, tools, and libraries)
-4. ## 🏗️ Architecture (Describe structure and clean-code layouts)
-5. ## 🚀 Installation (Clean, ready-to-run CLI commands)
-6. ## 🎮 Usage (Provide clear examples of usage or scripts)
-7. ## 🔮 Future Improvements (List planned feature upgrades)
+2. ## 🎯 Project Overview (Provide details on features and capabilities)
+3. ## 🚀 Installation Guide (Provide clean, step-by-step setup and installation commands)
+4. ## 🎮 Usage Instructions (Explain how to run the project with clear examples)
+5. ## 📸 Screenshots (Add placeholders for UI screenshots or diagrams)
+6. ## 🏗️ Architecture Diagram (Describe code layouts and system flow)
+7. ## 🔌 API Documentation (Document key HTTP endpoints or code APIs)
+8. ## 🤝 Contribution Guidelines (Provide details on how to contribute)
+9. ## 📄 License (State the MIT license or appropriate terms)
 
 Make it extremely polished, readable, and ready to be pushed to GitHub. Return ONLY the raw markdown text. Do not wrap the response in a JSON object or markdown code block.`;
 

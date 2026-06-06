@@ -1,187 +1,26 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { logger } from './logger.js';
 
-const landLocations = [
-  { lat: 37.7749, lon: -122.4194, loc: "San Francisco, USA" },
-  { lat: 51.5074, lon: -0.1278, loc: "London, UK" },
-  { lat: 35.6762, lon: 139.6503, loc: "Tokyo, Japan" },
-  { lat: 12.9716, lon: 77.5946, loc: "Bengaluru, India" },
-  { lat: 48.1351, lon: 11.5820, loc: "Munich, Germany" },
-  { lat: -33.8688, lon: 151.2093, loc: "Sydney, Australia" },
-  { lat: 48.8566, lon: 2.3522, loc: "Paris, France" },
-  { lat: -23.5505, lon: -46.6333, loc: "Sao Paulo, Brazil" },
-  { lat: 43.6532, lon: -79.3832, loc: "Toronto, Canada" },
-  { lat: 39.9042, lon: 116.4074, loc: "Beijing, China" },
-  { lat: -26.2041, lon: 28.0473, loc: "Johannesburg, South Africa" },
-  { lat: 30.0444, lon: 31.2357, loc: "Cairo, Egypt" },
-  { lat: 55.7558, lon: 37.6173, loc: "Moscow, Russia" },
-  { lat: 19.4326, lon: -99.1332, loc: "Mexico City, Mexico" },
-  { lat: -34.6037, lon: -58.3816, loc: "Buenos Aires, Argentina" },
-  { lat: 1.3521, lon: 103.8198, loc: "Singapore" },
-  { lat: 6.5244, lon: 3.3792, loc: "Lagos, Nigeria" },
-  { lat: 28.6139, lon: 77.2090, loc: "New Delhi, India" },
-  { lat: 40.7128, lon: -74.0060, loc: "New York, USA" }
-];
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const cities = [
-  { name: "Washington D.C.", lat: 38.9072, lon: -77.0369, country: "USA" },
-  { name: "Ottawa", lat: 45.4215, lon: -75.6972, country: "Canada" },
-  { name: "Mexico City", lat: 19.4326, lon: -99.1332, country: "Mexico" },
-  { name: "Havana", lat: 23.1136, lon: -82.3666, country: "Cuba" },
-  { name: "Guatemala City", lat: 14.6349, lon: -90.5069, country: "Guatemala" },
-  { name: "San Jose", lat: 9.9281, lon: -84.0907, country: "Costa Rica" },
-  { name: "Panama City", lat: 8.9824, lon: -79.5199, country: "Panama" },
-  { name: "Tegucigalpa", lat: 14.0723, lon: -87.1921, country: "Honduras" },
-  { name: "San Salvador", lat: 13.6929, lon: -89.2182, country: "El Salvador" },
-  { name: "Managua", lat: 12.1150, lon: -86.2362, country: "Nicaragua" },
-  { name: "Kingston", lat: 17.9714, lon: -76.7936, country: "Jamaica" },
-  { name: "Brasilia", lat: -15.7938, lon: -47.8828, country: "Brazil" },
-  { name: "Buenos Aires", lat: -34.6037, lon: -58.3816, country: "Argentina" },
-  { name: "Bogota", lat: 4.7110, lon: -74.0721, country: "Colombia" },
-  { name: "Lima", lat: -12.0464, lon: -77.0428, country: "Peru" },
-  { name: "Santiago", lat: -33.4489, lon: -70.6693, country: "Chile" },
-  { name: "Caracas", lat: 10.4806, lon: -66.9036, country: "Venezuela" },
-  { name: "Quito", lat: -0.1807, lon: -78.4678, country: "Ecuador" },
-  { name: "La Paz", lat: -16.4897, lon: -68.1193, country: "Bolivia" },
-  { name: "Asuncion", lat: -25.2637, lon: -57.5759, country: "Paraguay" },
-  { name: "Montevideo", lat: -34.9011, lon: -56.1645, country: "Uruguay" },
-  { name: "Georgetown", lat: 6.8013, lon: -58.1551, country: "Guyana" },
-  { name: "Paramaribo", lat: 5.8520, lon: -55.2038, country: "Suriname" },
-  { name: "London", lat: 51.5074, lon: -0.1278, country: "UK" },
-  { name: "Paris", lat: 48.8566, lon: 2.3522, country: "France" },
-  { name: "Berlin", lat: 52.5200, lon: 13.4050, country: "Germany" },
-  { name: "Rome", lat: 41.9028, lon: 12.4964, country: "Italy" },
-  { name: "Madrid", lat: 40.4168, lon: -3.7038, country: "Spain" },
-  { name: "Kyiv", lat: 50.4501, lon: 30.5234, country: "Ukraine" },
-  { name: "Warsaw", lat: 52.2297, lon: 21.0122, country: "Poland" },
-  { name: "Bucharest", lat: 44.4268, lon: 26.1025, country: "Romania" },
-  { name: "Amsterdam", lat: 52.3676, lon: 4.9041, country: "Netherlands" },
-  { name: "Brussels", lat: 50.8503, lon: 4.3517, country: "Belgium" },
-  { name: "Athens", lat: 37.9838, lon: 23.7275, country: "Greece" },
-  { name: "Prague", lat: 50.0755, lon: 14.4378, country: "Czechia" },
-  { name: "Lisbon", lat: 38.7223, lon: -9.1393, country: "Portugal" },
-  { name: "Stockholm", lat: 59.3293, lon: 18.0686, country: "Sweden" },
-  { name: "Budapest", lat: 47.4979, lon: 19.0402, country: "Hungary" },
-  { name: "Minsk", lat: 53.9006, lon: 27.5590, country: "Belarus" },
-  { name: "Vienna", lat: 48.2082, lon: 16.3738, country: "Austria" },
-  { name: "Bern", lat: 46.9480, lon: 7.4474, country: "Switzerland" },
-  { name: "Sofia", lat: 42.6977, lon: 23.3219, country: "Bulgaria" },
-  { name: "Belgrade", lat: 44.7872, lon: 20.4573, country: "Serbia" },
-  { name: "Copenhagen", lat: 55.6761, lon: 12.5683, country: "Denmark" },
-  { name: "Helsinki", lat: 60.1699, lon: 24.9384, country: "Finland" },
-  { name: "Bratislava", lat: 48.1486, lon: 17.1077, country: "Slovakia" },
-  { name: "Oslo", lat: 59.9139, lon: 10.7522, country: "Norway" },
-  { name: "Dublin", lat: 53.3498, lon: -6.2603, country: "Ireland" },
-  { name: "Zagreb", lat: 45.8150, lon: 15.9819, country: "Croatia" },
-  { name: "Tbilisi", lat: 41.7151, lon: 44.8271, country: "Georgia" },
-  { name: "Chisinau", lat: 47.0105, lon: 28.8638, country: "Moldova" },
-  { name: "Sarajevo", lat: 43.8563, lon: 18.4131, country: "Bosnia" },
-  { name: "Tirana", lat: 41.3275, lon: 19.8187, country: "Albania" },
-  { name: "Vilnius", lat: 54.6872, lon: 25.2797, country: "Lithuania" },
-  { name: "Skopje", lat: 41.9973, lon: 21.4280, country: "North Macedonia" },
-  { name: "Ljubljana", lat: 46.0569, lon: 14.5058, country: "Slovenia" },
-  { name: "Riga", lat: 56.9496, lon: 24.1052, country: "Latvia" },
-  { name: "Tallinn", lat: 59.4370, lon: 24.7536, country: "Estonia" },
-  { name: "Reykjavik", lat: 64.1466, lon: -21.9426, country: "Iceland" },
-  { name: "Luxembourg City", lat: 49.6116, lon: 6.1319, country: "Luxembourg" },
-  { name: "Beijing", lat: 39.9042, lon: 116.4074, country: "China" },
-  { name: "New Delhi", lat: 28.6139, lon: 77.2090, country: "India" },
-  { name: "Jakarta", lat: -6.2088, lon: 106.8456, country: "Indonesia" },
-  { name: "Islamabad", lat: 33.6844, lon: 73.0479, country: "Pakistan" },
-  { name: "Dhaka", lat: 23.8103, lon: 90.4125, country: "Bangladesh" },
-  { name: "Tokyo", lat: 35.6762, lon: 139.6503, country: "Japan" },
-  { name: "Manila", lat: 14.5995, lon: 120.9842, country: "Philippines" },
-  { name: "Hanoi", lat: 21.0285, lon: 105.8542, country: "Vietnam" },
-  { name: "Ankara", lat: 39.9334, lon: 32.8597, country: "Turkey" },
-  { name: "Tehran", lat: 35.6892, lon: 51.3890, country: "Iran" },
-  { name: "Bangkok", lat: 13.7563, lon: 100.5018, country: "Thailand" },
-  { name: "Naypyidaw", lat: 19.7633, lon: 96.0785, country: "Myanmar" },
-  { name: "Seoul", lat: 37.5665, lon: 126.9780, country: "South Korea" },
-  { name: "Baghdad", lat: 33.3152, lon: 44.3661, country: "Iraq" },
-  { name: "Kabul", lat: 34.5553, lon: 69.2075, country: "Afghanistan" },
-  { name: "Riyadh", lat: 24.7136, lon: 46.6753, country: "Saudi Arabia" },
-  { name: "Tashkent", lat: 41.2995, lon: 69.2401, country: "Uzbekistan" },
-  { name: "Kuala Lumpur", lat: 3.1390, lon: 101.6869, country: "Malaysia" },
-  { name: "Sanaa", lat: 15.3694, lon: 44.1910, country: "Yemen" },
-  { name: "Kathmandu", lat: 27.7172, lon: 85.3240, country: "Nepal" },
-  { name: "Colombo", lat: 6.9271, lon: 79.8612, country: "Sri Lanka" },
-  { name: "Astana", lat: 51.1605, lon: 71.4272, country: "Kazakhstan" },
-  { name: "Damascus", lat: 33.5138, lon: 36.2765, country: "Syria" },
-  { name: "Phnom Penh", lat: 11.5564, lon: 104.9282, country: "Cambodia" },
-  { name: "Amman", lat: 31.9454, lon: 35.9284, country: "Jordan" },
-  { name: "Baku", lat: 40.4093, lon: 49.8671, country: "Azerbaijan" },
-  { name: "Abu Dhabi", lat: 24.4539, lon: 54.3773, country: "UAE" },
-  { name: "Dushanbe", lat: 38.5598, lon: 68.7870, country: "Tajikistan" },
-  { name: "Jerusalem", lat: 31.7683, lon: 35.2137, country: "Israel" },
-  { name: "Vientiane", lat: 17.9757, lon: 102.6331, country: "Laos" },
-  { name: "Bishkek", lat: 42.8746, lon: 74.5698, country: "Kyrgyzstan" },
-  { name: "Beirut", lat: 33.8938, lon: 35.5018, country: "Lebanon" },
-  { name: "Singapore", lat: 1.3521, lon: 103.8198, country: "Singapore" },
-  { name: "Muscat", lat: 23.5859, lon: 58.4059, country: "Oman" },
-  { name: "Kuwait City", lat: 29.3759, lon: 47.9774, country: "Kuwait" },
-  { name: "Ulaanbaatar", lat: 47.8864, lon: 106.9057, country: "Mongolia" },
-  { name: "Yerevan", lat: 40.1792, lon: 44.4991, country: "Armenia" },
-  { name: "Doha", lat: 25.2854, lon: 51.5310, country: "Qatar" },
-  { name: "Manama", lat: 26.2285, lon: 50.5860, country: "Bahrain" },
-  { name: "Thimphu", lat: 27.4728, lon: 89.6373, country: "Bhutan" },
-  { name: "Male", lat: 4.1755, lon: 73.5093, country: "Maldives" },
-  { name: "Bandar Seri Begawan", lat: 4.8903, lon: 114.9404, country: "Brunei" },
-  { name: "Abuja", lat: 9.0765, lon: 7.3986, country: "Nigeria" },
-  { name: "Addis Ababa", lat: 9.0300, lon: 38.7400, country: "Ethiopia" },
-  { name: "Cairo", lat: 30.0444, lon: 31.2357, country: "Egypt" },
-  { name: "Kinshasa", lat: -4.4419, lon: 15.2663, country: "DR Congo" },
-  { name: "Dodoma", lat: -6.1630, lon: 35.7516, country: "Tanzania" },
-  { name: "Pretoria", lat: -25.7479, lon: 28.1878, country: "South Africa" },
-  { name: "Nairobi", lat: -1.2921, lon: 36.8219, country: "Kenya" },
-  { name: "Kampala", lat: 0.3476, lon: 32.5825, country: "Uganda" },
-  { name: "Algiers", lat: 36.7538, lon: 3.0588, country: "Algeria" },
-  { name: "Khartoum", lat: 15.5007, lon: 32.5599, country: "Sudan" },
-  { name: "Rabat", lat: 34.0209, lon: -6.8416, country: "Morocco" },
-  { name: "Luanda", lat: -8.8390, lon: 13.2894, country: "Angola" },
-  { name: "Maputo", lat: -25.9692, lon: 32.5732, country: "Mozambique" },
-  { name: "Accra", lat: 5.6037, lon: -0.1870, country: "Ghana" },
-  { name: "Antananarivo", lat: -18.8792, lon: 47.5079, country: "Madagascar" },
-  { name: "Yaounde", lat: 3.8480, lon: 11.5021, country: "Cameroon" },
-  { name: "Yamoussoukro", lat: 6.8276, lon: -5.2793, country: "Ivory Coast" },
-  { name: "Niamey", lat: 13.5116, lon: 2.1254, country: "Niger" },
-  { name: "Ouagadougou", lat: 12.3714, lon: -1.5197, country: "Burkina Faso" },
-  { name: "Bamako", lat: 12.6392, lon: -8.0029, country: "Mali" },
-  { name: "Lilongwe", lat: -13.9626, lon: 33.7741, country: "Malawi" },
-  { name: "Lusaka", lat: -15.3875, lon: 28.3228, country: "Zambia" },
-  { name: "Dakar", lat: 14.7167, lon: -17.4677, country: "Senegal" },
-  { name: "N'Djamena", lat: 12.1348, lon: 15.0557, country: "Chad" },
-  { name: "Mogadishu", lat: 2.0469, lon: 45.3182, country: "Somalia" },
-  { name: "Harare", lat: -17.8252, lon: 31.0335, country: "Zimbabwe" },
-  { name: "Conakry", lat: 9.5370, lon: -13.6773, country: "Guinea" },
-  { name: "Kigali", lat: -1.9403, lon: 30.0596, country: "Rwanda" },
-  { name: "Porto-Novo", lat: 6.4969, lon: 2.6289, country: "Benin" },
-  { name: "Gitega", lat: -3.4274, lon: 29.9319, country: "Burundi" },
-  { name: "Tunis", lat: 36.8065, lon: 10.1815, country: "Tunisia" },
-  { name: "Juba", lat: 4.8517, lon: 31.5822, country: "South Sudan" },
-  { name: "Lome", lat: 6.1375, lon: 1.2123, country: "Togo" },
-  { name: "Freetown", lat: 8.4844, lon: -13.2344, country: "Sierra Leone" },
-  { name: "Tripoli", lat: 32.8872, lon: 13.1913, country: "Libya" },
-  { name: "Brazzaville", lat: -4.2634, lon: 15.2832, country: "Congo" },
-  { name: "Bangui", lat: 4.3947, lon: 18.5582, country: "Central African Republic" },
-  { name: "Monrovia", lat: 6.3156, lon: -10.8074, country: "Liberia" },
-  { name: "Nouakchott", lat: 18.0835, lon: -15.9785, country: "Mauritania" },
-  { name: "Asmara", lat: 15.3390, lon: 38.9371, country: "Eritrea" },
-  { name: "Banjul", lat: 13.4549, lon: -16.5790, country: "Gambia" },
-  { name: "Gaborone", lat: -24.6282, lon: 25.9231, country: "Botswana" },
-  { name: "Libreville", lat: 0.4162, lon: 9.4673, country: "Gabon" },
-  { name: "Maseru", lat: -29.3134, lon: 27.4844, country: "Lesotho" },
-  { name: "Bissau", lat: 11.8632, lon: -15.5977, country: "Guinea-Bissau" },
-  { name: "Malabo", lat: 3.7504, lon: 8.7832, country: "Equatorial Guinea" },
-  { name: "Port Louis", lat: -20.1609, lon: 57.5012, country: "Mauritius" },
-  { name: "Mbabane", lat: -26.3055, lon: 31.1367, country: "Eswatini" },
-  { name: "Djibouti City", lat: 11.5880, lon: 43.1450, country: "Djibouti" },
-  { name: "Canberra", lat: -35.2809, lon: 149.1300, country: "Australia" },
-  { name: "Wellington", lat: -41.2865, lon: 174.7762, country: "New Zealand" },
-  { name: "Port Moresby", lat: -9.4438, lon: 147.1803, country: "Papua New Guinea" },
-  { name: "Suva", lat: -18.1248, lon: 178.4501, country: "Fiji" },
-  { name: "Honiara", lat: -9.4333, lon: 159.9500, country: "Solomon Islands" },
-  { name: "Port Vila", lat: -17.7333, lon: 168.3167, country: "Vanuatu" },
-  { name: "Apia", lat: -13.8333, lon: -171.7667, country: "Samoa" }
-];
+// Load dynamic geocoding config data
+const loadGeoipConfig = () => {
+  try {
+    const configPath = path.join(__dirname, '..', 'config', 'geoip-data.json');
+    const content = fs.readFileSync(configPath, 'utf-8');
+    return JSON.parse(content);
+  } catch (error) {
+    logger.error('Failed to load geocoding config file, using empty fallbacks', { error: error.message });
+    return { landLocations: [], cities: [] };
+  }
+};
+
+const configData = loadGeoipConfig();
+const landLocations = configData.landLocations || [];
+const cities = configData.cities || [];
 
 const geocodeLocation = (locStr) => {
   try {
@@ -196,6 +35,10 @@ const geocodeLocation = (locStr) => {
     if (l.includes('paris') || l.includes('france')) return { lat: 48.8566, lon: 2.3522, loc: "Paris, France" };
     if (l.includes('brazil') || l.includes('sao paulo') || l.includes('rio')) return { lat: -23.5505, lon: -46.6333, loc: "Sao Paulo, Brazil" };
     if (l.includes('canada') || l.includes('toronto') || l.includes('vancouver')) return { lat: 43.6532, lon: -79.3832, loc: "Toronto, Canada" };
+
+    if (landLocations.length === 0) {
+      return { lat: 0, lon: 0, loc: "Unknown Coordinates" };
+    }
 
     let hash = 0;
     for (let i = 0; i < locStr.length; i++) {
