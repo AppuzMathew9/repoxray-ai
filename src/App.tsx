@@ -798,8 +798,8 @@ function App() {
             <div className="rounded-3xl bg-[#090d16] border border-white/5 overflow-hidden shadow-2xl grid grid-cols-1 lg:grid-cols-12 min-h-[650px]">
 
               {/* Sidebar Navigation */}
-              <aside className="lg:col-span-3 bg-[#111625] border-r border-white/5 p-6 flex flex-col justify-between">
-                <div className="space-y-8">
+              <aside className="lg:col-span-3 bg-[#111625] border-b lg:border-b-0 lg:border-r border-white/5 p-4 lg:p-6 flex flex-col justify-between gap-6">
+                <div className="space-y-4 lg:space-y-8">
                   <div className="flex items-center gap-2 px-2">
                     <div className="w-6.5 h-6.5 rounded-lg bg-cyan-950 flex items-center justify-center border border-cyan-800/30 text-cyan-400">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -809,8 +809,8 @@ function App() {
                     <span className="text-sm font-bold text-white tracking-widest font-outfit uppercase">RepoXray</span>
                   </div>
 
-                  <div className="space-y-6">
-                    <div className="space-y-1.5">
+                  <div className="space-y-4 lg:space-y-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-2 lg:space-y-1.5">
                       {[
                         { id: 'overview', name: 'Dashboard Overview', icon: TrendingUp },
                         { id: 'engineering', name: 'Engineering Review', icon: Activity },
@@ -824,48 +824,50 @@ function App() {
                           <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as ViewType)}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-[11px] font-bold rounded-xl transition-all cursor-pointer ${isActive
+                            className={`w-full flex items-center gap-2 lg:gap-3 px-3 py-2 lg:px-4 lg:py-2.5 text-left text-[10px] lg:text-[11px] font-bold rounded-xl transition-all cursor-pointer ${isActive
                                 ? 'bg-gradient-to-r from-indigo-650 to-indigo-600 text-white shadow-md shadow-indigo-900/30'
                                 : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
                               }`}
                           >
-                            <Icon className="w-4 h-4" />
-                            <span>{tab.name}</span>
+                            <Icon className="w-3.5 h-3.5 lg:w-4 lg:h-4 shrink-0" />
+                            <span className="truncate">{tab.name}</span>
                           </button>
                         );
                       })}
                     </div>
 
-                    <div className="space-y-1.5">
-                      <div className="px-4 text-[9px] font-bold uppercase text-slate-500 tracking-wider">Analysis Options</div>
-                      {[
-                        { id: 'interview', name: 'Interview Prep Guidelines', icon: Award },
-                        { id: 'roadmap', name: '30-Day Project Roadmap', icon: GitPullRequest },
-                      ].map((tab) => {
-                        const Icon = tab.icon;
-                        const isActive = activeTab === tab.id;
-                        return (
-                          <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as ViewType)}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-[11px] font-bold rounded-xl transition-all cursor-pointer ${isActive
-                                ? 'bg-gradient-to-r from-indigo-650 to-indigo-600 text-white shadow-md shadow-indigo-900/30'
-                                : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
-                              }`}
-                          >
-                            <Icon className="w-4 h-4" />
-                            <span>{tab.name}</span>
-                          </button>
-                        );
-                      })}
+                    <div className="space-y-2 lg:space-y-1.5">
+                      <div className="px-2 lg:px-4 text-[8px] lg:text-[9px] font-bold uppercase text-slate-500 tracking-wider">Analysis Options</div>
+                      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-1 gap-2 lg:space-y-1.5">
+                        {[
+                          { id: 'interview', name: 'Interview Prep Guidelines', icon: Award },
+                          { id: 'roadmap', name: '30-Day Project Roadmap', icon: GitPullRequest },
+                        ].map((tab) => {
+                          const Icon = tab.icon;
+                          const isActive = activeTab === tab.id;
+                          return (
+                            <button
+                              key={tab.id}
+                              onClick={() => setActiveTab(tab.id as ViewType)}
+                              className={`w-full flex items-center gap-2 lg:gap-3 px-3 py-2 lg:px-4 lg:py-2.5 text-left text-[10px] lg:text-[11px] font-bold rounded-xl transition-all cursor-pointer ${isActive
+                                  ? 'bg-gradient-to-r from-indigo-650 to-indigo-600 text-white shadow-md shadow-indigo-900/30'
+                                  : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
+                                }`}
+                            >
+                              <Icon className="w-3.5 h-3.5 lg:w-4 lg:h-4 shrink-0" />
+                              <span className="truncate">{tab.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-6 border-t border-white/5">
+                <div className="pt-4 lg:pt-6 border-t border-white/5">
                   <button
                     onClick={() => setReport(null)}
-                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-800 text-[10px] font-bold rounded-xl transition-colors w-full cursor-pointer uppercase tracking-wider"
+                    className="px-4 py-2 lg:py-2.5 bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white border border-slate-800 text-[9px] lg:text-[10px] font-bold rounded-xl transition-colors w-full cursor-pointer uppercase tracking-wider"
                   >
                     Scan New Repo
                   </button>
