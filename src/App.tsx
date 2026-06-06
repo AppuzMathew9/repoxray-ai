@@ -39,6 +39,16 @@ interface GlobeRepoPoint {
 const API_BASE = (import.meta.env.VITE_API_URL as string) || '';
 
 function App() {
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleError = (e: ErrorEvent) => {
+      setRuntimeError(`${e.message} at ${e.filename}:${e.lineno}`);
+    };
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
   const [repoUrl, setRepoUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -505,6 +515,16 @@ function App() {
     if (!repoUrl.trim()) return;
     triggerJarvisScan(repoUrl);
   };
+
+  if (runtimeError) {
+    return (
+      <div style={{ padding: 30, background: '#180202', color: '#fca5a5', fontFamily: 'monospace', zIndex: 999999, position: 'fixed', inset: 0, overflow: 'auto', border: '5px solid #dc2626' }}>
+        <h2 style={{ color: '#ef4444', borderBottom: '1px solid #ef4444', paddingBottom: 10 }}>⚠️ Runtime Exception Captured</h2>
+        <pre style={{ background: '#000', padding: 20, borderRadius: 8, whiteSpace: 'pre-wrap', color: '#fff' }}>{runtimeError}</pre>
+        <button onClick={() => setRuntimeError(null)} style={{ background: '#ef4444', color: '#fff', padding: '8px 16px', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 'bold' }}>Dismiss</button>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen flex flex-col font-sans selection:bg-cyan-500/30 transition-colors duration-300 ${isLightMode ? 'bg-[#f8fafc] text-slate-800 selection:text-cyan-800' : 'bg-[#030712] text-slate-100 selection:text-cyan-200'} overflow-x-hidden relative`}>
