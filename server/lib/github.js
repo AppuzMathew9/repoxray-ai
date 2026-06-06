@@ -51,12 +51,18 @@ function parseGitHubUrl(repoUrl) {
     if (!match) return null;
     return { owner: match[1], repo: match[2] };
   } catch (error) {
+    logger.error(`Error parsing GitHub URL: ${repoUrl}`, { error: error.message });
     return null;
   }
 }
 
 // Fetch Repository Metadata
 async function fetchRepoMetadata(owner, repo, headers) {
+  if (!owner || !repo) {
+    logger.error(`Invalid repository parameters passed to fetchRepoMetadata: owner=${owner}, repo=${repo}`);
+    throw Boom.badRequest('Repository owner and name are required.');
+  }
+
   const cacheKey = `${owner}/${repo}:metadata`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
@@ -66,15 +72,32 @@ async function fetchRepoMetadata(owner, repo, headers) {
     setCached(cacheKey, response.data);
     return response.data;
   } catch (err) {
-    if (err.response && err.response.status === 404) {
-      throw Boom.notFound(`Repository not found or is private: ${owner}/${repo}`);
+    if (err.response) {
+      if (err.response.status === 404) {
+        logger.warn(`Repository not found or is private: ${owner}/${repo}`);
+        throw Boom.notFound(`Repository not found or is private: ${owner}/${repo}`);
+      }
+      if (err.response.status === 401) {
+        logger.error(`GitHub API Token unauthorized (401) fetching ${owner}/${repo}`);
+        throw Boom.unauthorized('Invalid GitHub API Token provided.');
+      }
+      if (err.response.status === 403) {
+        logger.error(`GitHub API rate limit exceeded or access forbidden (403) fetching ${owner}/${repo}`);
+        throw Boom.forbidden('GitHub API rate limit exceeded or access forbidden.');
+      }
     }
+    logger.error(`Failed to fetch repo metadata for ${owner}/${repo}: ${err.message}`);
     throw Boom.badGateway(`Failed to fetch repo metadata: ${err.message}`);
   }
 }
 
 // Fetch README Content (truncated to 8000 chars to stay within model token limits)
 async function fetchReadme(owner, repo, headers) {
+  if (!owner || !repo) {
+    logger.error(`Invalid repository parameters passed to fetchReadme: owner=${owner}, repo=${repo}`);
+    throw Boom.badRequest('Repository owner and name are required.');
+  }
+
   const cacheKey = `${owner}/${repo}:readme`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
@@ -96,6 +119,11 @@ async function fetchReadme(owner, repo, headers) {
 
 // Fetch File Tree
 async function fetchFileTree(owner, repo, defaultBranch, headers) {
+  if (!owner || !repo) {
+    logger.error(`Invalid repository parameters passed to fetchFileTree: owner=${owner}, repo=${repo}`);
+    throw Boom.badRequest('Repository owner and name are required.');
+  }
+
   const cacheKey = `${owner}/${repo}:${defaultBranch || 'main'}:tree`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
@@ -118,6 +146,11 @@ async function fetchFileTree(owner, repo, defaultBranch, headers) {
 
 // Fetch Key Source Files
 async function fetchSourceFiles(owner, repo, defaultBranch, headers) {
+  if (!owner || !repo) {
+    logger.error(`Invalid repository parameters passed to fetchSourceFiles: owner=${owner}, repo=${repo}`);
+    throw Boom.badRequest('Repository owner and name are required.');
+  }
+
   const cacheKey = `${owner}/${repo}:${defaultBranch || 'main'}:sourcefiles`;
   const cached = getCached(cacheKey);
   if (cached) return cached;

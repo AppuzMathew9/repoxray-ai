@@ -5,6 +5,8 @@ import {
   parseGitHubUrl, 
   fetchRepoMetadata, 
   fetchReadme, 
+  fetchFileTree, 
+  fetchSourceFiles,
   apiCache, 
   getCached, 
   setCached, 
@@ -65,6 +67,46 @@ test('GitHub API Wrapper Utilities', async (t) => {
     );
   });
 
+  await t.test('fetchRepoMetadata should raise Boom 401 on API unauthorized', async () => {
+    mock.method(axios, 'get', async () => {
+      const error = new Error('Unauthorized');
+      error.response = { status: 401 };
+      throw error;
+    });
+
+    await assert.rejects(
+      async () => await fetchRepoMetadata('dummy-owner-2a', 'dummy-repo-2a', {}),
+      (err) => err.isBoom && err.output.statusCode === 401
+    );
+  });
+
+  await t.test('fetchRepoMetadata should raise Boom 403 on rate limit or forbidden', async () => {
+    mock.method(axios, 'get', async () => {
+      const error = new Error('Forbidden');
+      error.response = { status: 403 };
+      throw error;
+    });
+
+    await assert.rejects(
+      async () => await fetchRepoMetadata('dummy-owner-2b', 'dummy-repo-2b', {}),
+      (err) => err.isBoom && err.output.statusCode === 403
+    );
+  });
+
+  await t.test('fetchRepoMetadata should throw badRequest on missing parameters', async () => {
+    await assert.rejects(
+      async () => await fetchRepoMetadata('', 'repo', {}),
+      (err) => err.isBoom && err.output.statusCode === 400
+    );
+  });
+
+  await t.test('fetchReadme should throw badRequest on missing parameters', async () => {
+    await assert.rejects(
+      async () => await fetchReadme('owner', '', {}),
+      (err) => err.isBoom && err.output.statusCode === 400
+    );
+  });
+
   await t.test('fetchReadme should fall back to standard message on Axios failure', async () => {
     mock.method(axios, 'get', async () => {
       throw new Error('Timeout');
@@ -72,6 +114,52 @@ test('GitHub API Wrapper Utilities', async (t) => {
 
     const res = await fetchReadme('dummy-owner-3', 'dummy-repo-3', {});
     assert.strictEqual(res, 'No README file found in the repository root.');
+  });
+
+  await t.test('fetchFileTree should retrieve trees and filter out node_modules', async () => {
+    const dummyTree = {
+      tree: [
+        { path: 'src/main.js', type: 'blob' },
+        { path: 'node_modules/express/index.js', type: 'blob' }
+      ]
+    };
+    mock.method(axios, 'get', async () => ({ data: dummyTree }));
+
+    const res = await fetchFileTree('dummy-owner-4', 'dummy-repo-4', 'main', {});
+    assert.ok(res.includes('[File] src/main.js'));
+    assert.ok(!res.includes('node_modules'));
+  });
+
+  await t.test('fetchFileTree should throw badRequest on empty owner', async () => {
+    await assert.rejects(
+      async () => await fetchFileTree('', 'repo', 'main', {}),
+      (err) => err.isBoom && err.output.statusCode === 400
+    );
+  });
+
+  await t.test('fetchSourceFiles should fetch content of core files', async () => {
+    const dummyTree = {
+      tree: [
+        { path: 'server.js', type: 'blob' }
+      ]
+    };
+    mock.method(axios, 'get', async (url) => {
+      if (url.includes('/git/trees/')) {
+        return { data: dummyTree };
+      }
+      return { data: { content: Buffer.from('console.log("hello")', 'utf-8').toString('base64') } };
+    });
+
+    const res = await fetchSourceFiles('dummy-owner-5', 'dummy-repo-5', 'main', {});
+    assert.ok(res.includes('--- File: server.js ---'));
+    assert.ok(res.includes('console.log("hello")'));
+  });
+
+  await t.test('fetchSourceFiles should throw badRequest on empty repo', async () => {
+    await assert.rejects(
+      async () => await fetchSourceFiles('owner', '', 'main', {}),
+      (err) => err.isBoom && err.output.statusCode === 400
+    );
   });
 });
 
