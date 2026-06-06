@@ -3,7 +3,8 @@ import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'url';
-import { parseGitHubUrl, getPromptTemplate, sanitizeAnalysis, safeJsonParse } from '../server.js';
+import { parseGitHubUrl } from '../lib/github.js';
+import { getPromptTemplate, sanitizeAnalysis, safeJsonParse } from '../lib/llm.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
