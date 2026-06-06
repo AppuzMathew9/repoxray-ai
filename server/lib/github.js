@@ -8,9 +8,14 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache TTL
 
 const getCached = (key) => {
   const cached = apiCache.get(key);
-  if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
-    logger.info(`Serving GitHub API response from cache: ${key}`);
-    return cached.data;
+  if (cached) {
+    if (Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      logger.info(`Serving GitHub API response from cache: ${key}`);
+      return cached.data;
+    } else {
+      logger.info(`Cache expired for: ${key}. Evicting entry.`);
+      apiCache.delete(key);
+    }
   }
   return null;
 };
@@ -19,15 +24,19 @@ const setCached = (key, data) => {
   apiCache.set(key, { data, timestamp: Date.now() });
 };
 
+// Clear all cache entries (useful for testing or manual refreshes)
+const clearCache = () => {
+  apiCache.clear();
+};
+
 // GitHub API Headers helper
 const getGithubHeaders = () => {
-  const token = process.env.GITHUB_TOKEN;
   const headers = {
     Accept: 'application/vnd.github.v3+json',
     'User-Agent': 'RepoXray-AI-Platform',
   };
-  if (token) {
-    headers.Authorization = `token ${token}`;
+  if (process.env.GITHUB_TOKEN) {
+    headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
   }
   return headers;
 };
@@ -151,5 +160,9 @@ export {
   fetchRepoMetadata,
   fetchReadme,
   fetchFileTree,
-  fetchSourceFiles
+  fetchSourceFiles,
+  apiCache,
+  getCached,
+  setCached,
+  clearCache
 };

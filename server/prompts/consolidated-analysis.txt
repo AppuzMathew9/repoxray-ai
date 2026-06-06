@@ -35,8 +35,8 @@ REQUIRED OUTPUT — Return ALL fields as a single raw JSON object (no markdown, 
   },
   "documentationAudit": {
     "documentationScore": <number 0-100>,
-    "presentSections": [<list of README sections actually found in the provided README content>],
-    "missingSections": [<list of standard sections NOT found in the README>],
+    "presentSections": [<list of standard README sections found in the README content. Standard sections MUST be selected ONLY from: ["Project Overview", "Installation Guide", "Usage Instructions", "Screenshots", "Architecture Diagram", "API Documentation", "Contribution Guidelines", "License"]>],
+    "missingSections": [<list of standard README sections NOT found in the README. Standard sections MUST be selected ONLY from: ["Project Overview", "Installation Guide", "Usage Instructions", "Screenshots", "Architecture Diagram", "API Documentation", "Contribution Guidelines", "License"]>],
     "recommendations": [
       "<Specific README improvement for THIS project>",
       "<Second specific documentation task>",

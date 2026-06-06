@@ -206,10 +206,56 @@ function sanitizeAnalysis(raw) {
 
   // 2. Documentation Audit
   const rawDoc = data.documentationAudit || {};
+  const standardSections = [
+    'Project Overview',
+    'Installation Guide',
+    'Usage Instructions',
+    'Screenshots',
+    'Architecture Diagram',
+    'API Documentation',
+    'Contribution Guidelines',
+    'License'
+  ];
+
+  const normalizeSections = (arr) => {
+    if (!Array.isArray(arr)) return [];
+    const mapped = new Set();
+    for (const item of arr) {
+      if (typeof item !== 'string') continue;
+      const l = item.toLowerCase().trim();
+      if (l.includes('overview') || l.includes('what it does') || l.includes('about')) {
+        mapped.add('Project Overview');
+      } else if (l.includes('install') || l.includes('getting started') || l.includes('setup') || l.includes('clone') || l.includes('prerequisite')) {
+        mapped.add('Installation Guide');
+      } else if (l.includes('usage') || l.includes('how to use') || l.includes('running') || l.includes('features')) {
+        mapped.add('Usage Instructions');
+      } else if (l.includes('screenshot')) {
+        mapped.add('Screenshots');
+      } else if (l.includes('architecture') || l.includes('diagram') || l.includes('structure') || l.includes('design')) {
+        mapped.add('Architecture Diagram');
+      } else if (l.includes('api') || l.includes('endpoint') || l.includes('reference')) {
+        mapped.add('API Documentation');
+      } else if (l.includes('contribut') || l.includes('guidelines') || l.includes('join')) {
+        mapped.add('Contribution Guidelines');
+      } else if (l.includes('license')) {
+        mapped.add('License');
+      } else {
+        const match = standardSections.find(s => s.toLowerCase() === l);
+        if (match) mapped.add(match);
+      }
+    }
+    return Array.from(mapped);
+  };
+
+  const present = normalizeSections(rawDoc.presentSections || []);
+  // Fallbacks if nothing detected or parsing is empty
+  const presentSections = present.length > 0 ? present : ["Project Overview", "Installation Guide"];
+  const missingSections = standardSections.filter(s => !presentSections.includes(s));
+
   const documentationAudit = {
     documentationScore: cleanNum(rawDoc.documentationScore, 70),
-    presentSections: cleanArray(rawDoc.presentSections, ["Project Overview", "Installation Guide"]),
-    missingSections: cleanArray(rawDoc.missingSections, ["Contribution Guidelines", "API Documentation", "License"]),
+    presentSections,
+    missingSections,
     recommendations: cleanArray(rawDoc.recommendations, ["Add a complete API reference", "Provide licensing terms", "Provide contribution steps"])
   };
 
