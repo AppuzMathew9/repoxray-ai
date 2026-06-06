@@ -6,14 +6,45 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import winston from 'winston';
+import Boom from '@hapi/boom';
+import clsHooked from 'cls-hooked';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Create cls-hooked session namespace for request tracking
+const session = clsHooked.createNamespace('repoxray-session');
+
+// Winston logger configuration for production readiness
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ timestamp, level, message, ...meta }) => {
+      const rid = session.active ? session.get('requestId') : null;
+      const reqIdStr = rid ? ` [ReqID: ${rid}]` : '';
+      return `${timestamp} [${level.toUpperCase()}]${reqIdStr}: ${message}${Object.keys(meta).length ? ' ' + JSON.stringify(meta) : ''}`;
+    })
+  ),
+  transports: [
+    new winston.transports.Console()
+  ]
+});
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Middleware to bind request correlation IDs
+app.use((req, res, next) => {
+  session.run(() => {
+    const requestId = req.headers['x-request-id'] || `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    session.set('requestId', requestId);
+    next();
+  });
+});
 
 app.use(cors());
 app.use(express.json());
@@ -49,14 +80,29 @@ function parseGitHubUrl(repoUrl) {
   }
 }
 
+// Cache for prompt templates to avoid repetitive file I/O operations
+const templateCache = new Map();
+
 // Helper to read prompt template files
-function getPromptTemplate(filename, data) {
-  const filePath = path.join(__dirname, 'prompts', filename);
-  let template = fs.readFileSync(filePath, 'utf-8');
-  for (const [key, value] of Object.entries(data)) {
-    template = template.replace(new RegExp(`{{${key}}}`, 'g'), value);
+function getPromptTemplate(filename, data = {}) {
+  try {
+    let template = templateCache.get(filename);
+    if (!template) {
+      const filePath = path.join(__dirname, 'prompts', filename);
+      template = fs.readFileSync(filePath, 'utf-8');
+      templateCache.set(filename, template);
+      logger.info(`Loaded prompt template from disk and cached: ${filename}`);
+    }
+    
+    let interpolated = template;
+    for (const [key, value] of Object.entries(data)) {
+      interpolated = interpolated.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    }
+    return interpolated;
+  } catch (error) {
+    logger.error(`Failed to load prompt template ${filename}`, { error: error.message });
+    throw Boom.internal(`Template processing error: ${error.message}`);
   }
-  return template;
 }
 
 // Helper to safely parse JSON from LLM responses
@@ -76,6 +122,11 @@ function safeJsonParse(str) {
     throw e;
   }
 }
+
+// Express helper to handle async route errors
+const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
 
 // Safely sanitize and guarantee exact JSON schema shape with fallback values
 function sanitizeAnalysis(raw) {
@@ -273,7 +324,7 @@ async function queryGemini(promptText, schemaText) {
             finalPrompt.slice(-keepTail);
         }
 
-        console.log(`Attempting Groq (${groqModel}, ${groqPrompt.length} chars)...`);
+        logger.info(`Attempting Groq (${groqModel}, ${groqPrompt.length} chars)...`);
         const response = await axios.post(
           'https://api.groq.com/openai/v1/chat/completions',
           {
@@ -292,10 +343,10 @@ async function queryGemini(promptText, schemaText) {
         return JSON.parse(cleaned);
       } catch (err) {
         const errDetail = err.response?.data?.error?.message || err.message;
-        console.warn(`Groq (${groqModel}) failed: ${errDetail}`);
+        logger.warn(`Groq (${groqModel}) failed: ${errDetail}`);
       }
     }
-    console.log('All Groq models failed. Proceeding to Hugging Face / Local LLMs...');
+    logger.info('All Groq models failed. Proceeding to Hugging Face / Local LLMs...');
   }
 
   // 2. Hugging Face Inference API (Serverless) - Remote equivalent for local-class LLMs
@@ -310,7 +361,7 @@ async function queryGemini(promptText, schemaText) {
 
     for (const hfModel of hfModels) {
       try {
-        console.log(`Attempting Hugging Face LLM (${hfModel})...`);
+        logger.info(`Attempting Hugging Face LLM (${hfModel})...`);
         const response = await axios.post(
           'https://api-inference.huggingface.co/v1/chat/completions',
           {
@@ -330,10 +381,10 @@ async function queryGemini(promptText, schemaText) {
         const cleaned = content.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/, '').trim();
         return JSON.parse(cleaned);
       } catch (err) {
-        console.warn(`Hugging Face LLM (${hfModel}) failed: ${err.message}`);
+        logger.warn(`Hugging Face LLM (${hfModel}) failed: ${err.message}`);
       }
     }
-    console.log('All Hugging Face models failed. Proceeding to Local LLMs...');
+    logger.info('All Hugging Face models failed. Proceeding to Local LLMs...');
   }
 
   // 3. Local LLM endpoints (LM Studio, Ollama, vLLM)
@@ -347,7 +398,7 @@ async function queryGemini(promptText, schemaText) {
 
   for (const local of localEndpoints) {
     try {
-      console.log(`Attempting Local LLM (${local.name}) on ${local.url}...`);
+      logger.info(`Attempting Local LLM (${local.name}) on ${local.url}...`);
       const response = await axios.post(
         local.url,
         {
@@ -366,11 +417,11 @@ async function queryGemini(promptText, schemaText) {
       return JSON.parse(cleaned);
     } catch (err) {
       // Quietly fall back, local server might not be running or failed
-      console.log(`Local LLM (${local.name}) not available: ${err.message}`);
+      logger.info(`Local LLM (${local.name}) not available: ${err.message}`);
     }
   }
 
-  throw new Error('All responsive LLM providers failed or were offline. Groq rate limits exceeded and local models are not running.');
+  throw Boom.badGateway('All responsive LLM providers failed or were offline. Groq rate limits exceeded and local models are not running.');
 }
 
 
@@ -380,156 +431,159 @@ app.get('/api/health', (req, res) => {
 });
 
 // Main Analyze Endpoint
-app.post('/api/analyze', async (req, res) => {
+// Main Analyze Endpoint
+app.post('/api/analyze', asyncHandler(async (req, res, next) => {
   const { url } = req.body;
   if (!url) {
-    return res.status(400).json({ error: 'GitHub repository URL is required.' });
+    throw Boom.badRequest('GitHub repository URL is required.');
   }
 
   const repoDetails = parseGitHubUrl(url);
   if (!repoDetails) {
-    return res.status(400).json({ error: 'Invalid GitHub repository URL. Must be in the format: https://github.com/owner/repo' });
+    throw Boom.badRequest('Invalid GitHub repository URL. Must be in the format: https://github.com/owner/repo');
   }
 
   const { owner, repo } = repoDetails;
   const headers = getGithubHeaders();
 
+  logger.info(`Starting analysis for repository ${owner}/${repo}...`);
+
+  // 1. Fetch Repository Metadata
+  let repoMeta;
   try {
-    console.log(`Fetching data for ${owner}/${repo}...`);
-
-    // 1. Fetch Repository Metadata
-    let repoMeta;
-    try {
-      const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}`, { headers, timeout: 12000 });
-      repoMeta = response.data;
-    } catch (err) {
-      if (err.response && err.response.status === 404) {
-        return res.status(404).json({ error: `Repository not found or is private: ${owner}/${repo}` });
-      }
-      throw new Error(`Failed to fetch repo metadata: ${err.message}`);
+    const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}`, { headers, timeout: 12000 });
+    repoMeta = response.data;
+  } catch (err) {
+    if (err.response && err.response.status === 404) {
+      throw Boom.notFound(`Repository not found or is private: ${owner}/${repo}`);
     }
-
-    // 2. Fetch README Content (truncated to 8000 chars to stay within model token limits)
-    let readmeContent = '';
-    try {
-      const readmeRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers, timeout: 12000 });
-      if (readmeRes.data.content) {
-        const fullReadme = Buffer.from(readmeRes.data.content, 'base64').toString('utf-8');
-        readmeContent = fullReadme.slice(0, 8000);
-        if (fullReadme.length > 8000) readmeContent += '\n[README truncated for token limit]';
-      }
-    } catch (err) {
-      console.log('No README found or error fetching README: ', err.message);
-      readmeContent = 'No README file found in the repository root.';
-    }
-
-    // 3. Fetch File Tree (recurse up to 2 levels or grab direct files to avoid rate limits)
-    let fileTreeStr = '';
-    try {
-      const treeRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}/git/trees/${repoMeta.default_branch || 'main'}?recursive=1`, { headers, timeout: 12000 });
-      const files = treeRes.data.tree || [];
-      // Filter out typical build artifacts, package locks, etc., and restrict count to limit size
-      const filteredFiles = files
-        .filter(f => !f.path.includes('node_modules') && !f.path.includes('.git/') && !f.path.includes('.next/') && !f.path.includes('build/') && !f.path.includes('dist/'))
-        .slice(0, 100); // Max 100 entries for context limit
-
-      fileTreeStr = filteredFiles.map(f => `${f.type === 'tree' ? '[Dir]' : '[File]'} ${f.path}`).join('\n');
-    } catch (err) {
-      console.log('Failed to fetch tree structure: ', err.message);
-      fileTreeStr = 'Unable to fetch file tree due to API restrictions.';
-    }
-
-    // 4. Fetch Key Source Files (up to 3 files to build sample source code contexts like main/app files, configurations)
-    let sourceFilesStr = '';
-    try {
-      const treeRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}/git/trees/${repoMeta.default_branch || 'main'}?recursive=1`, { headers, timeout: 12000 });
-      const files = treeRes.data.tree || [];
-      // Look for config, index, app, server, main files
-      const candidates = files.filter(f => {
-        const p = f.path.toLowerCase();
-        return (
-          f.type === 'blob' &&
-          (p.endsWith('.js') || p.endsWith('.ts') || p.endsWith('.tsx') || p.endsWith('.py') || p.endsWith('.json')) &&
-          !p.includes('package-lock.json') &&
-          !p.includes('node_modules') &&
-          (p.includes('config') || p.includes('app') || p.includes('index') || p.includes('server') || p.includes('main') || p.includes('routes'))
-        );
-      }).slice(0, 3); // Fetch max 3 files to stay in context limits safely
-
-      for (const file of candidates) {
-        const fileRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${file.path}`, { headers, timeout: 12000 });
-        const content = Buffer.from(fileRes.data.content, 'base64').toString('utf-8');
-        sourceFilesStr += `\n--- File: ${file.path} ---\n${content.slice(0, 1500)}\n`; // Max 1500 chars per file
-      }
-    } catch (err) {
-      console.log('Failed to fetch sample source files: ', err.message);
-      sourceFilesStr = 'No key source files fetched.';
-    }
-
-    // 5. Build prompt templates with fetched data
-    const contextData = {
-      repoName: `${owner}/${repo}`,
-      description: repoMeta.description || 'No description provided.',
-      languages: repoMeta.language || 'Unknown',
-      fileTree: fileTreeStr,
-      readme: readmeContent,
-      sourceFiles: sourceFilesStr
-    };
-
-    console.log('Querying Gemini to analyze repo (consolidated single request)...');
-
-    // Run consolidated single Gemini analysis pass
-    const consolidatedAnalysis = await queryGemini(getPromptTemplate('consolidated-analysis.txt', contextData));
-    const cleanAnalysis = sanitizeAnalysis(consolidatedAnalysis);
-
-    // Return structured aggregate report
-    const responsePayload = {
-      repository: {
-        name: repoMeta.name,
-        fullName: repoMeta.full_name,
-        owner: repoMeta.owner.login,
-        ownerAvatar: repoMeta.owner.avatar_url,
-        description: repoMeta.description,
-        stars: repoMeta.stargazers_count,
-        forks: repoMeta.forks_count,
-        languagesUrl: repoMeta.languages_url,
-        htmlUrl: repoMeta.html_url,
-        primaryLanguage: repoMeta.language
-      },
-      analysis: cleanAnalysis
-    };
-
-    console.log(`Analysis complete for ${owner}/${repo}!`);
-    res.json(responsePayload);
-
-  } catch (error) {
-    console.error('Analysis error:', error.message);
-    res.status(500).json({ error: `Analysis failed: ${error.message}` });
+    throw Boom.badGateway(`Failed to fetch repo metadata: ${err.message}`);
   }
-});
+
+  // 2. Fetch README Content (truncated to 8000 chars to stay within model token limits)
+  let readmeContent = '';
+  try {
+    const readmeRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers, timeout: 12000 });
+    if (readmeRes.data.content) {
+      const fullReadme = Buffer.from(readmeRes.data.content, 'base64').toString('utf-8');
+      readmeContent = fullReadme.slice(0, 8000);
+      if (fullReadme.length > 8000) readmeContent += '\n[README truncated for token limit]';
+    }
+  } catch (err) {
+    logger.warn(`No README found or error fetching README for ${owner}/${repo}: ${err.message}`);
+    readmeContent = 'No README file found in the repository root.';
+  }
+
+  // 3. Fetch File Tree (recurse up to 2 levels or grab direct files to avoid rate limits)
+  let fileTreeStr = '';
+  try {
+    const treeRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}/git/trees/${repoMeta.default_branch || 'main'}?recursive=1`, { headers, timeout: 12000 });
+    const files = treeRes.data.tree || [];
+    // Filter out typical build artifacts, package locks, etc., and restrict count to limit size
+    const filteredFiles = files
+      .filter(f => !f.path.includes('node_modules') && !f.path.includes('.git/') && !f.path.includes('.next/') && !f.path.includes('build/') && !f.path.includes('dist/'))
+      .slice(0, 100); // Max 100 entries for context limit
+
+    fileTreeStr = filteredFiles.map(f => `${f.type === 'tree' ? '[Dir]' : '[File]'} ${f.path}`).join('\n');
+  } catch (err) {
+    logger.warn(`Failed to fetch tree structure for ${owner}/${repo}: ${err.message}`);
+    fileTreeStr = 'Unable to fetch file tree due to API restrictions.';
+  }
+
+  // 4. Fetch Key Source Files (up to 3 files to build sample source code contexts like main/app files, configurations)
+  let sourceFilesStr = '';
+  try {
+    const treeRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}/git/trees/${repoMeta.default_branch || 'main'}?recursive=1`, { headers, timeout: 12000 });
+    const files = treeRes.data.tree || [];
+    // Look for config, index, app, server, main files
+    const candidates = files.filter(f => {
+      const p = f.path.toLowerCase();
+      return (
+        f.type === 'blob' &&
+        (p.endsWith('.js') || p.endsWith('.ts') || p.endsWith('.tsx') || p.endsWith('.py') || p.endsWith('.json')) &&
+        !p.includes('package-lock.json') &&
+        !p.includes('node_modules') &&
+        (p.includes('config') || p.includes('app') || p.includes('index') || p.includes('server') || p.includes('main') || p.includes('routes'))
+      );
+    }).slice(0, 3); // Fetch max 3 files to stay in context limits safely
+
+    for (const file of candidates) {
+      const fileRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${file.path}`, { headers, timeout: 12000 });
+      const content = Buffer.from(fileRes.data.content, 'base64').toString('utf-8');
+      sourceFilesStr += `\n--- File: ${file.path} ---\n${content.slice(0, 1500)}\n`; // Max 1500 chars per file
+    }
+  } catch (err) {
+    logger.warn(`Failed to fetch sample source files for ${owner}/${repo}: ${err.message}`);
+    sourceFilesStr = 'No key source files fetched.';
+  }
+
+  // 5. Build prompt templates with fetched data
+  const contextData = {
+    repoName: `${owner}/${repo}`,
+    description: repoMeta.description || 'No description provided.',
+    languages: repoMeta.language || 'Unknown',
+    fileTree: fileTreeStr,
+    readme: readmeContent,
+    sourceFiles: sourceFilesStr
+  };
+
+  logger.info(`Querying Gemini to analyze repo ${owner}/${repo} (consolidated request)...`);
+
+  // Run consolidated single Gemini analysis pass
+  const consolidatedAnalysis = await queryGemini(getPromptTemplate('consolidated-analysis.txt', contextData));
+  const cleanAnalysis = sanitizeAnalysis(consolidatedAnalysis);
+
+  // Return structured aggregate report
+  const responsePayload = {
+    repository: {
+      name: repoMeta.name,
+      fullName: repoMeta.full_name,
+      owner: repoMeta.owner.login,
+      ownerAvatar: repoMeta.owner.avatar_url,
+      description: repoMeta.description,
+      stars: repoMeta.stargazers_count,
+      forks: repoMeta.forks_count,
+      languagesUrl: repoMeta.languages_url,
+      htmlUrl: repoMeta.html_url,
+      primaryLanguage: repoMeta.language
+    },
+    analysis: cleanAnalysis
+  };
+
+  logger.info(`Analysis complete for ${owner}/${repo}!`);
+  res.json(responsePayload);
+}));
 
 // Generate Professional README Endpoint
-app.post('/api/generate-readme', async (req, res) => {
+app.post('/api/generate-readme', asyncHandler(async (req, res, next) => {
   const { url } = req.body;
   if (!url) {
-    return res.status(400).json({ error: 'GitHub repository URL is required.' });
+    throw Boom.badRequest('GitHub repository URL is required.');
   }
 
   const repoDetails = parseGitHubUrl(url);
   if (!repoDetails) {
-    return res.status(400).json({ error: 'Invalid GitHub repository URL. Must be in the format: https://github.com/owner/repo' });
+    throw Boom.badRequest('Invalid GitHub repository URL. Must be in the format: https://github.com/owner/repo');
   }
 
   const { owner, repo } = repoDetails;
   const headers = getGithubHeaders();
 
+  let readmeMarkdown = '';
+  logger.info(`Generating professional README for ${owner}/${repo}...`);
+  
+  let repoMeta;
   try {
-    let readmeMarkdown = '';
-    console.log(`Generating professional README for ${owner}/${repo}...`);
     const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}`, { headers, timeout: 12000 });
-    const repoMeta = response.data;
+    repoMeta = response.data;
+  } catch (err) {
+    if (err.response && err.response.status === 404) {
+      throw Boom.notFound(`Repository not found or is private: ${owner}/${repo}`);
+    }
+    throw Boom.badGateway(`Failed to fetch repo metadata: ${err.message}`);
+  }
 
-    const prompt = `You are an expert technical writer and developer advocate. Write a comprehensive, modern, production-grade README.md file in markdown format for the GitHub repository: "${owner}/${repo}".
+  const prompt = `You are an expert technical writer and developer advocate. Write a comprehensive, modern, production-grade README.md file in markdown format for the GitHub repository: "${owner}/${repo}".
 Description: ${repoMeta.description || 'No description provided.'}
 Primary Language: ${repoMeta.language || 'Unknown'}
 
@@ -544,125 +598,121 @@ Your generated README.md MUST include the following structured sections:
 
 Make it extremely polished, readable, and ready to be pushed to GitHub. Return ONLY the raw markdown text. Do not wrap the response in a JSON object or markdown code block.`;
 
-    // 1. Try Groq (most responsive cloud API)
-    const groqKey = process.env.GROQ_API_KEY;
-    if (!readmeMarkdown && groqKey) {
+  // 1. Try Groq (most responsive cloud API)
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!readmeMarkdown && groqKey) {
+    try {
+      logger.info('Generating README via Groq...');
+      const groqResponse = await axios.post(
+        'https://api.groq.com/openai/v1/chat/completions',
+        {
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: prompt }]
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${groqKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 20000
+        }
+      );
+      readmeMarkdown = groqResponse.data.choices[0].message.content.trim();
+    } catch (err) {
+      logger.warn(`Groq README generation failed: ${err.message}`);
+      logger.info('Groq failed for README. Proceeding to Local LLMs...');
+    }
+  }
+
+  // 2. Try Hugging Face Inference API
+  const hfKey = process.env.HUGGING_FACE_API;
+  if (!readmeMarkdown && hfKey) {
+    const hfModels = [
+      'meta-llama/Llama-3.2-3B-Instruct',
+      'meta-llama/Meta-Llama-3-8B-Instruct',
+      'mistralai/Mistral-7B-Instruct-v0.3',
+      'microsoft/Phi-3-mini-4k-instruct'
+    ];
+    for (const hfModel of hfModels) {
       try {
-        console.log('Generating README via Groq...');
-        const groqResponse = await axios.post(
-          'https://api.groq.com/openai/v1/chat/completions',
+        logger.info(`Generating README via Hugging Face (${hfModel})...`);
+        const response = await axios.post(
+          'https://api-inference.huggingface.co/v1/chat/completions',
           {
-            model: 'llama-3.3-70b-versatile',
-            messages: [{ role: 'user', content: prompt }]
+            model: hfModel,
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 4096,
           },
           {
             headers: {
-              'Authorization': `Bearer ${groqKey}`,
+              'Authorization': `Bearer ${hfKey}`,
               'Content-Type': 'application/json'
             },
-            timeout: 20000
+            timeout: 25000
           }
         );
-        readmeMarkdown = groqResponse.data.choices[0].message.content.trim();
+        if (response.data?.choices?.[0]?.message?.content) {
+          readmeMarkdown = response.data.choices[0].message.content.trim();
+          break;
+        }
       } catch (err) {
-        console.warn(`Groq README generation failed: ${err.message}`);
-        console.log('Groq failed for README. Proceeding to Local LLMs...');
+        logger.warn(`Hugging Face LLM (${hfModel}) failed for README: ${err.message}`);
       }
     }
-
-    // 2. Try Hugging Face Inference API
-    const hfKey = process.env.HUGGING_FACE_API;
-    if (!readmeMarkdown && hfKey) {
-      const hfModels = [
-        'meta-llama/Llama-3.2-3B-Instruct',
-        'meta-llama/Meta-Llama-3-8B-Instruct',
-        'mistralai/Mistral-7B-Instruct-v0.3',
-        'microsoft/Phi-3-mini-4k-instruct'
-      ];
-      for (const hfModel of hfModels) {
-        try {
-          console.log(`Generating README via Hugging Face (${hfModel})...`);
-          const response = await axios.post(
-            'https://api-inference.huggingface.co/v1/chat/completions',
-            {
-              model: hfModel,
-              messages: [{ role: 'user', content: prompt }],
-              max_tokens: 4096,
-            },
-            {
-              headers: {
-                'Authorization': `Bearer ${hfKey}`,
-                'Content-Type': 'application/json'
-              },
-              timeout: 25000
-            }
-          );
-          if (response.data?.choices?.[0]?.message?.content) {
-            readmeMarkdown = response.data.choices[0].message.content.trim();
-            break;
-          }
-        } catch (err) {
-          console.warn(`Hugging Face LLM (${hfModel}) failed for README: ${err.message}`);
-        }
-      }
-    }
-
-    // 3. Try Local LLM endpoints (LM Studio, Ollama, vLLM)
-    if (!readmeMarkdown) {
-      const localEndpoints = [
-        { name: 'LM Studio', url: 'http://localhost:1234/v1/chat/completions', model: 'local-model' },
-        { name: 'Ollama (Llama 3)', url: 'http://localhost:11434/v1/chat/completions', model: 'llama3' },
-        { name: 'Ollama (Mistral)', url: 'http://localhost:11434/v1/chat/completions', model: 'mistral' },
-        { name: 'Ollama (Phi-3)', url: 'http://localhost:11434/v1/chat/completions', model: 'phi3' },
-        { name: 'vLLM', url: 'http://localhost:8000/v1/chat/completions', model: 'local-model' }
-      ];
-
-      for (const local of localEndpoints) {
-        try {
-          console.log(`Generating README via Local LLM (${local.name}) on ${local.url}...`);
-          const response = await axios.post(
-            local.url,
-            {
-              model: local.model,
-              messages: [{ role: 'user', content: prompt }],
-              max_tokens: 4096,
-            },
-            {
-              headers: { 'Content-Type': 'application/json' },
-              timeout: 8000
-            }
-          );
-          if (response.data?.choices?.[0]?.message?.content) {
-            readmeMarkdown = response.data.choices[0].message.content.trim();
-            break;
-          }
-        } catch (err) {
-          console.log(`Local LLM (${local.name}) failed for README: ${err.message}`);
-        }
-      }
-    }
-
-    if (!readmeMarkdown) {
-      readmeMarkdown = `# ${repoMeta.name}\n\n${repoMeta.description || 'No description provided.'}\n\n## ✨ Features\n- Interactive platform analytics\n- Real-time diagnostics\n\n## 🛠️ Tech Stack\n- ${repoMeta.language || 'JavaScript'}\n\n## 🚀 Installation\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\``;
-    }
-
-    // Clean markdown wrappers if returned
-    if (readmeMarkdown.startsWith('```markdown')) {
-      readmeMarkdown = readmeMarkdown.substring(11);
-    } else if (readmeMarkdown.startsWith('```')) {
-      readmeMarkdown = readmeMarkdown.substring(3);
-    }
-    if (readmeMarkdown.endsWith('```')) {
-      readmeMarkdown = readmeMarkdown.substring(0, readmeMarkdown.length - 3);
-    }
-    readmeMarkdown = readmeMarkdown.trim();
-
-    res.json({ readme: readmeMarkdown });
-  } catch (error) {
-    console.error('README generation error:', error.message);
-    res.status(500).json({ error: `README generation failed: ${error.message}` });
   }
-});
+
+  // 3. Try Local LLM endpoints (LM Studio, Ollama, vLLM)
+  if (!readmeMarkdown) {
+    const localEndpoints = [
+      { name: 'LM Studio', url: 'http://localhost:1234/v1/chat/completions', model: 'local-model' },
+      { name: 'Ollama (Llama 3)', url: 'http://localhost:11434/v1/chat/completions', model: 'llama3' },
+      { name: 'Ollama (Mistral)', url: 'http://localhost:11434/v1/chat/completions', model: 'mistral' },
+      { name: 'Ollama (Phi-3)', url: 'http://localhost:11434/v1/chat/completions', model: 'phi3' },
+      { name: 'vLLM', url: 'http://localhost:8000/v1/chat/completions', model: 'local-model' }
+    ];
+
+    for (const local of localEndpoints) {
+      try {
+        logger.info(`Generating README via Local LLM (${local.name}) on ${local.url}...`);
+        const response = await axios.post(
+          local.url,
+          {
+            model: local.model,
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 4096,
+          },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 8000
+          }
+        );
+        if (response.data?.choices?.[0]?.message?.content) {
+          readmeMarkdown = response.data.choices[0].message.content.trim();
+          break;
+        }
+      } catch (err) {
+        logger.info(`Local LLM (${local.name}) failed for README: ${err.message}`);
+      }
+    }
+  }
+
+  if (!readmeMarkdown) {
+    readmeMarkdown = `# ${repoMeta.name}\n\n${repoMeta.description || 'No description provided.'}\n\n## ✨ Features\n- Interactive platform analytics\n- Real-time diagnostics\n\n## 🛠️ Tech Stack\n- ${repoMeta.language || 'JavaScript'}\n\n## 🚀 Installation\n\`\`\`bash\nnpm install\nnpm run dev\n\`\`\``;
+  }
+
+  // Clean markdown wrappers if returned
+  if (readmeMarkdown.startsWith('```markdown')) {
+    readmeMarkdown = readmeMarkdown.substring(11);
+  } else if (readmeMarkdown.startsWith('```')) {
+    readmeMarkdown = readmeMarkdown.substring(3);
+  }
+  if (readmeMarkdown.endsWith('```')) {
+    readmeMarkdown = readmeMarkdown.substring(0, readmeMarkdown.length - 3);
+  }
+  readmeMarkdown = readmeMarkdown.trim();
+
+  res.json({ readme: readmeMarkdown });
+}));
 
 // Map location text to coordinates helper
 const landLocations = [
@@ -964,7 +1014,7 @@ const fallbackPublicRepos = [
 ];
 
 // Globe Repositories Discovery Endpoint (500 items high-density)
-app.get('/api/globe-repos', async (req, res) => {
+app.get('/api/globe-repos', asyncHandler(async (req, res, next) => {
   const headers = getGithubHeaders();
 
   // 1. Fetch user's owned repositories (up to 100)
@@ -978,7 +1028,7 @@ app.get('/api/globe-repos', async (req, res) => {
       ownedRepos = response.data.filter(repo => repo && repo.name && repo.owner && repo.owner.login && repo.html_url);
     }
   } catch (err) {
-    console.log('Unable to fetch user repos, serving fallback coordinates.');
+    logger.warn('Unable to fetch user repos, serving fallback coordinates.', { error: err.message });
   }
 
   // Ensure we have user owned repos. If none are fetched, let's mock/simulate some for owner username "AppuzMathew9"
@@ -1001,7 +1051,7 @@ app.get('/api/globe-repos', async (req, res) => {
       publicRepos = searchRes.data.items.filter(repo => repo && repo.name && repo.owner && repo.owner.login && repo.html_url);
     }
   } catch (err) {
-    console.log('Unable to fetch popular repositories: ', err.message);
+    logger.warn(`Unable to fetch popular repositories: ${err.message}`);
   }
 
   // Fallback to static lists if empty
@@ -1036,61 +1086,52 @@ app.get('/api/globe-repos', async (req, res) => {
 
   const combinedRepos = [...ownedRepos.slice(0, 125), ...publicRepos.slice(0, 375)];
 
-  try {
-    // Distribute repositories
-    const mappedPoints = combinedRepos.map((repo, index) => {
-      // Deterministically assign each repository to one of the cities / Alappuzha using its hash
-      let hash = 0;
-      const key = repo.name + (repo.owner?.login || 'fallback') + index;
-      for (let i = 0; i < key.length; i++) {
-        hash = key.charCodeAt(i) + ((hash << 5) - hash);
-      }
+  const mappedPoints = combinedRepos.map((repo, index) => {
+    // Deterministically assign each repository to one of the cities / Alappuzha using its hash
+    let hash = 0;
+    const key = repo.name + (repo.owner?.login || 'fallback') + index;
+    for (let i = 0; i < key.length; i++) {
+      hash = key.charCodeAt(i) + ((hash << 5) - hash);
+    }
 
-      const isOwner = ownedRepos.some(r => r.html_url === repo.html_url) || repo.owner?.login === 'AppuzMathew9';
+    const isOwner = ownedRepos.some(r => r.html_url === repo.html_url) || repo.owner?.login === 'AppuzMathew9';
 
-      let lat, lon, loc;
-      if (isOwner) {
-        // Alappuzha, Kerala, India coordinates with micro scatter
-        const scatterLat = 9.4981 + ((Math.abs(hash) % 40) - 20) / 250; // tight cluster (+/- 0.08 degrees)
-        const scatterLon = 76.3388 + ((Math.abs(hash >> 2) % 40) - 20) / 250;
-        lat = scatterLat;
-        lon = scatterLon;
-        loc = "Owner Repository (Alappuzha, India)";
+    let lat, lon, loc;
+    if (isOwner) {
+      // Alappuzha, Kerala, India coordinates with micro scatter
+      const scatterLat = 9.4981 + ((Math.abs(hash) % 40) - 20) / 250; // tight cluster (+/- 0.08 degrees)
+      const scatterLon = 76.3388 + ((Math.abs(hash >> 2) % 40) - 20) / 250;
+      lat = scatterLat;
+      lon = scatterLon;
+      loc = "Owner Repository (Alappuzha, India)";
+    } else {
+      // Distribute the public repos 1-to-1 to each country/city first
+      let city;
+      const publicIndex = index - 125; // index of public repos starting from 0
+      if (publicIndex >= 0 && publicIndex < cities.length) {
+        city = cities[publicIndex];
       } else {
-        // Distribute the public repos 1-to-1 to each country/city first
-        let city;
-        const publicIndex = index - 125; // index of public repos starting from 0
-        if (publicIndex >= 0 && publicIndex < cities.length) {
-          city = cities[publicIndex];
-        } else {
-          const cityIndex = Math.abs(hash) % cities.length;
-          city = cities[cityIndex];
-        }
-        lat = city.lat + ((Math.abs(hash) % 40) - 20) / 100; // tightly cluster close to capital (+/- 0.2 degrees)
-        lon = city.lon + ((Math.abs(hash >> 2) % 40) - 20) / 100;
-        loc = `${city.name}, ${city.country}`;
+        const cityIndex = Math.abs(hash) % cities.length;
+        city = cities[cityIndex];
       }
+      lat = city.lat + ((Math.abs(hash) % 40) - 20) / 100; // tightly cluster close to capital (+/- 0.2 degrees)
+      lon = city.lon + ((Math.abs(hash >> 2) % 40) - 20) / 100;
+      loc = `${city.name}, ${city.country}`;
+    }
 
-      return {
-        name: repo.name,
-        owner: repo.owner?.login || 'github',
-        url: repo.html_url,
-        lat: lat,
-        lon: lon,
-        loc: loc,
-        isOwner: isOwner
-      };
-    });
+    return {
+      name: repo.name,
+      owner: repo.owner?.login || 'github',
+      url: repo.html_url,
+      lat: lat,
+      lon: lon,
+      loc: loc,
+      isOwner: isOwner
+    };
+  });
 
-    res.json(mappedPoints);
-
-  } catch (error) {
-    console.error('Globe repos distribution failed:', error);
-    res.json([]);
-  }
-});
-
-
+  res.json(mappedPoints);
+}));
 
 // Serve static assets in production
 const distPath = path.join(__dirname, '../dist');
@@ -1106,6 +1147,38 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Global Express Error Handling Middleware for standardizing API errors
+app.use((err, req, res, next) => {
+  if (Boom.isBoom(err)) {
+    logger.error(`Boom Error: ${err.message}`, {
+      statusCode: err.output.statusCode,
+      payload: err.output.payload,
+      stack: err.stack
+    });
+    return res.status(err.output.statusCode).json(err.output.payload);
+  }
+
+  logger.error(`Unhandled Internal Server Error: ${err.message}`, { stack: err.stack });
+  const internalError = Boom.internal('An unexpected error occurred');
+  return res.status(internalError.output.statusCode).json(internalError.output.payload);
 });
+
+// Only start the server if this file is run directly
+const isMain = () => {
+  try {
+    if (!process.argv[1]) return false;
+    const mainPath = fs.realpathSync(process.argv[1]);
+    const modulePath = fs.realpathSync(fileURLToPath(import.meta.url));
+    return mainPath === modulePath;
+  } catch (e) {
+    return false;
+  }
+};
+
+if (isMain()) {
+  app.listen(PORT, () => {
+    logger.info(`Server running on port ${PORT}`);
+  });
+}
+
+export { parseGitHubUrl, getPromptTemplate, sanitizeAnalysis, safeJsonParse };

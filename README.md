@@ -214,6 +214,51 @@ See [SYSTEM_DESIGN.md](./SYSTEM_DESIGN.md) for the full architecture write-up co
 
 ---
 
+## 🔌 API Documentation
+
+RepoXray AI backend exposes standard REST API endpoints. All error responses are formatted as standardized RFC 7807/Boom JSON payloads.
+
+### 1. Health Status
+- **Endpoint:** `GET /api/health`
+- **Description:** Verifies connectivity and retrieves backend state.
+- **Response Format:**
+  ```json
+  {
+    "status": "ok",
+    "timestamp": "2026-06-07T00:15:00.000Z",
+    "port": 5000
+  }
+  ```
+
+### 2. Analyze Repository
+- **Endpoint:** `POST /api/analyze`
+- **Payload:** `{ "url": "https://github.com/owner/repo" }`
+- **Description:** Scans file structure and fetches key files for LLM analysis.
+- **Headers:** Includes optional `x-request-id` header for log correlation.
+
+### 3. Generate README
+- **Endpoint:** `POST /api/generate-readme`
+- **Payload:** `{ "url": "https://github.com/owner/repo" }`
+- **Description:** Uses the LLM failover pipeline to output a markdown README template.
+
+### 4. Globe Repositories Discovery
+- **Endpoint:** `GET /api/globe-repos`
+- **Description:** Retrieves 500 geolocation-mapped repositories (25% owned, 75% popular public) for the 3D globe visualization.
+
+---
+
+## 🤝 Contribution Guidelines
+
+We welcome contributions to RepoXray AI! To get started:
+1. **Fork the repository** on GitHub.
+2. **Create a feature branch:** `git checkout -b feature/amazing-feature`.
+3. **Write tests** for any new utility helper functions under the `server/test` directory.
+4. **Ensure tests pass:** Run `npm test` inside the `server/` directory.
+5. **Commit your changes:** Follow descriptive clean-commit messages.
+6. **Push and Open a Pull Request.**
+
+---
+
 ## 📄 License
 
 MIT License — see [LICENSE](LICENSE) for details.
