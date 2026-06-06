@@ -1,0 +1,21 @@
+Analyze the documentation quality of the repository using the provided repository README and codebase context.
+You must respond with a JSON object ONLY matching this schema:
+{
+  "documentationScore": number (0-100),
+  "presentSections": [string],
+  "missingSections": [string],
+  "recommendations": [string]
+}
+
+Available sections to check for:
+- "Project Overview"
+- "Installation Guide"
+- "Usage Instructions"
+- "Screenshots"
+- "Architecture Diagram"
+- "API Documentation"
+- "Contribution Guidelines"
+- "License"
+
+Repository README Content:
+{{readme}}

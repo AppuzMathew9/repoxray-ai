@@ -1,0 +1,24 @@
+Analyze the engineering health of the repository using the provided repository context (file structure, README, configuration files, and sample source files). 
+You must respond with a JSON object ONLY matching this schema:
+{
+  "engineeringScore": number (0-100),
+  "subscores": {
+    "architecture": number (0-100),
+    "maintainability": number (0-100),
+    "scalability": number (0-100),
+    "codeOrganization": number (0-100)
+  },
+  "strengths": [string],
+  "weaknesses": [string],
+  "recommendations": [string]
+}
+
+Repository Context:
+Repository Name: {{repoName}}
+Description: {{description}}
+Languages: {{languages}}
+File Tree:
+{{fileTree}}
+
+Sample Files Code:
+{{sourceFiles}}

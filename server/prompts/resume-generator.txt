@@ -1,0 +1,19 @@
+Generate 3-5 professional, ATS-friendly resume bullets for a software engineer based on this repository's codebase, structure, complexity, and technology stack.
+Each bullet point MUST:
+- Start with an action verb (e.g. Developed, Architected, Refactored, Optimized)
+- Explicitly mention specific technologies, tools, or frameworks used
+- Highlight technical impact, optimization, or value (using realistic metrics or clear impact descriptions based on what the repo does)
+
+You must respond with a JSON object ONLY matching this schema:
+{
+  "bullets": [string]
+}
+
+Repository Context:
+Repository Name: {{repoName}}
+Description: {{description}}
+Languages: {{languages}}
+File Tree:
+{{fileTree}}
+Sample Files Code:
+{{sourceFiles}}

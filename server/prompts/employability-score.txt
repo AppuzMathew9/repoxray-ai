@@ -1,0 +1,30 @@
+Generate an employability and developer portfolio readiness assessment for this repository.
+Evaluate along these dimensions (each scored 0-100):
+- Technical Depth (complexity of code, state management, algorithm choice, data fetching, async patterns)
+- Documentation Quality (clarity, guides, completeness of README)
+- Portfolio Presentation (how clean and impressive the repository layout is for recruiters)
+- Project Complexity (depth of codebase, third-party integrations, custom components/APIs)
+- Professional Readiness (testing, environment setups, production-readiness config, deployment setup)
+
+You must respond with a JSON object ONLY matching this schema:
+{
+  "overallEmployabilityScore": number (0-100),
+  "subscores": {
+    "technicalDepth": number (0-100),
+    "documentationQuality": number (0-100),
+    "portfolioPresentation": number (0-100),
+    "projectComplexity": number (0-100),
+    "professionalReadiness": number (0-100)
+  },
+  "strengths": [string],
+  "improvementAreas": [string]
+}
+
+Repository Context:
+Repository Name: {{repoName}}
+Description: {{description}}
+Languages: {{languages}}
+File Tree:
+{{fileTree}}
+Sample Files Code:
+{{sourceFiles}}

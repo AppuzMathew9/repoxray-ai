@@ -1,0 +1,26 @@
+Generate 10-15 interview questions tailored to the repository's technology stack, architecture, and coding patterns.
+Group questions into three categories: "Technical Questions", "Project-Specific Questions", and "Deep-Dive Follow-Up Questions".
+Each question must be marked with a difficulty level: "Beginner", "Intermediate", or "Advanced".
+Provide a brief suggested answer guidelines or key talking points for each question.
+
+You must respond with a JSON object ONLY matching this schema:
+{
+  "questions": [
+    {
+      "id": string,
+      "category": "Technical Questions" | "Project-Specific Questions" | "Deep-Dive Follow-Up Questions",
+      "question": string,
+      "difficulty": "Beginner" | "Intermediate" | "Advanced",
+      "suggestedTalkingPoints": [string]
+    }
+  ]
+}
+
+Repository Context:
+Repository Name: {{repoName}}
+Description: {{description}}
+Languages: {{languages}}
+File Tree:
+{{fileTree}}
+Sample Files Code:
+{{sourceFiles}}

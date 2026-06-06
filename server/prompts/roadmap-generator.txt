@@ -1,0 +1,24 @@
+Generate a prioritized, actionable 30-day improvement roadmap for the repository.
+Each recommendation/task should have a priority level: "High", "Medium", or "Low", and list the actionable steps, a target timeline, and the expected outcome.
+
+You must respond with a JSON object ONLY matching this schema:
+{
+  "tasks": [
+    {
+      "title": string,
+      "priority": "High" | "Medium" | "Low",
+      "actionableSteps": [string],
+      "timeline": string (e.g. "Days 1-5" or "Days 10-15"),
+      "expectedOutcome": string
+    }
+  ]
+}
+
+Repository Context:
+Repository Name: {{repoName}}
+Description: {{description}}
+Languages: {{languages}}
+File Tree:
+{{fileTree}}
+Sample Files Code:
+{{sourceFiles}}
