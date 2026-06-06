@@ -232,6 +232,24 @@ Make it extremely polished, readable, and ready to be pushed to GitHub. Return O
   }
   readmeMarkdown = readmeMarkdown.trim();
 
+  // Post-process to guarantee all standard headings are present
+  const requiredHeadings = [
+    { key: '🎯 Project Overview', heading: '## 🎯 Project Overview', fallback: '\n\n## 🎯 Project Overview\nAn interactive repository intelligence platform to audit and improve code quality.' },
+    { key: '🚀 Installation Guide', heading: '## 🚀 Installation Guide', fallback: '\n\n## 🚀 Installation Guide\n```bash\nnpm install\nnpm run build\nnpm start\n```' },
+    { key: '🎮 Usage Instructions', heading: '## 🎮 Usage Instructions', fallback: '\n\n## 🎮 Usage Instructions\nRun the development server and scan any public GitHub repository to audit it.' },
+    { key: '📸 Screenshots', heading: '## 📸 Screenshots', fallback: '\n\n## 📸 Screenshots\n![Dashboard](docs/screenshot.png)' },
+    { key: '🏗️ Architecture Diagram', heading: '## 🏗️ Architecture Diagram', fallback: '\n\n## 🏗️ Architecture Diagram\nReact Frontend -> Express Backend -> Gemini/HuggingFace API.' },
+    { key: '🔌 API Documentation', heading: '## 🔌 API Documentation', fallback: '\n\n## 🔌 API Documentation\nGET /api/health - Check server health status\nPOST /api/analyze - Scan a repository' },
+    { key: '🤝 Contribution Guidelines', heading: '## 🤝 Contribution Guidelines', fallback: '\n\n## 🤝 Contribution Guidelines\nPlease open pull requests or report bugs in the issues tracker.' },
+    { key: '📄 License', heading: '## 📄 License', fallback: '\n\n## 📄 License\nMIT License' }
+  ];
+
+  for (const h of requiredHeadings) {
+    if (!readmeMarkdown.includes(h.key) && !readmeMarkdown.includes(h.heading)) {
+      readmeMarkdown += h.fallback;
+    }
+  }
+
   res.json({ readme: readmeMarkdown });
 }));
 

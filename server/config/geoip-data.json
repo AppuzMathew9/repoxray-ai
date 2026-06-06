@@ -179,5 +179,16 @@
     { "name": "Honiara", "lat": -9.4333, "lon": 159.95, "country": "Solomon Islands" },
     { "name": "Port Vila", "lat": -17.7333, "lon": 168.3167, "country": "Vanuatu" },
     { "name": "Apia", "lat": -13.8333, "lon": -171.7667, "country": "Samoa" }
+  ],
+  "locationRules": [
+    { "keys": ["francisco", "california", "ca"], "coords": { "lat": 37.7749, "lon": -122.4194, "loc": "San Francisco, USA" } },
+    { "keys": ["london", "uk", "united kingdom"], "coords": { "lat": 51.5074, "lon": -0.1278, "loc": "London, UK" } },
+    { "keys": ["tokyo", "japan"], "coords": { "lat": 35.6762, "lon": 139.6503, "loc": "Tokyo, Japan" } },
+    { "keys": ["india", "bangalore", "bengaluru"], "coords": { "lat": 12.9716, "lon": 77.5946, "loc": "Bengaluru, India" } },
+    { "keys": ["germany", "munich", "berlin"], "coords": { "lat": 48.1351, "lon": 11.582, "loc": "Munich, Germany" } },
+    { "keys": ["australia", "sydney", "melbourne"], "coords": { "lat": -33.8688, "lon": 151.2093, "loc": "Sydney, Australia" } },
+    { "keys": ["paris", "france"], "coords": { "lat": 48.8566, "lon": 2.3522, "loc": "Paris, France" } },
+    { "keys": ["brazil", "sao paulo", "rio"], "coords": { "lat": -23.5505, "lon": -46.6333, "loc": "Sao Paulo, Brazil" } },
+    { "keys": ["canada", "toronto", "vancouver"], "coords": { "lat": 43.6532, "lon": -79.3832, "loc": "Toronto, Canada" } }
   ]
 }

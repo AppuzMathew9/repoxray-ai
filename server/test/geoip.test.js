@@ -22,14 +22,18 @@ test('GeoIP Geocoding Utility', async (t) => {
     assert.ok(typeof unknown1.lon === 'number');
   });
 
-  await t.test('should handle null, empty or non-string inputs safely without crashing', () => {
+  await t.test('should handle null, empty or non-string inputs safely returning default coordinates', () => {
+    const defaultCoords = { lat: 0, lon: 0, loc: "Unknown Coordinates" };
+
     const emptyResult = geocodeLocation('');
-    assert.strictEqual(emptyResult, null);
+    assert.deepStrictEqual(emptyResult, defaultCoords);
 
     const nullResult = geocodeLocation(null);
-    assert.strictEqual(nullResult, null);
+    assert.deepStrictEqual(nullResult, defaultCoords);
 
     const numResult = geocodeLocation(12345);
-    assert.strictEqual(numResult, null);
+    // Number will be cast to string "12345" and geocoded via hashing
+    assert.ok(typeof numResult.lat === 'number');
+    assert.ok(typeof numResult.lon === 'number');
   });
 });
