@@ -7,11 +7,13 @@
 ![Tech Stack](https://img.shields.io/badge/Stack-React%20%7C%20Node.js%20%7C%20TypeScript-informational?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
+## 📸 Screenshots
+
 ![RepoXray AI Dashboard](docs/screenshot.png)
 
 ---
 
-## 🎯 What It Does
+## 🎯 Project Overview
 
 RepoXray AI connects to any public GitHub repository and uses a multi-provider LLM pipeline to generate a comprehensive 6-part intelligence report:
 
@@ -39,7 +41,7 @@ RepoXray AI connects to any public GitHub repository and uses a multi-provider L
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture Diagram
 
 ![RepoXray AI Architecture Diagrams](docs/architecture.png)
 
@@ -73,7 +75,7 @@ User → React Frontend (Vite, Port 3000)
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Installation Guide
 
 ### Prerequisites
 
@@ -132,7 +134,7 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 🎮 How to Use
+## 🎮 Usage Instructions
 
 1. **Wait for the planetary loading animation** to complete (8 seconds — 2 orbit cycles)
 2. **Browse the 3D globe** — 500 real GitHub repositories are mapped as glowing coordinate points
@@ -256,6 +258,32 @@ We welcome contributions to RepoXray AI! To get started:
 4. **Ensure tests pass:** Run `npm test` inside the `server/` directory.
 5. **Commit your changes:** Follow descriptive clean-commit messages.
 6. **Push and Open a Pull Request.**
+
+---
+
+## 🔧 Troubleshooting
+
+If you encounter issues during installation or setup:
+- **Port 5000 Already in Use:** Kill the process running on port 5000 or set a custom `PORT` in your environment files.
+  - Windows command to release port: `netstat -ano | findstr :5000` followed by `taskkill /PID <PID> /F`.
+- **Axios Rate Limits / 403 Forbidden:** Provide a valid `GITHUB_TOKEN` in your `server/.env` to increase query rate limits to 5000 req/hr.
+- **Fail to Fetch Errors:** Verify the backend Express server on port 5000 is active.
+
+---
+
+## 🛡️ Security
+
+We prioritize security:
+- **API Keys Safety:** Never check in your `server/.env` or API credentials to GitHub. Always use standard environment variables.
+- **Input Sanitization:** All user-provided repository URLs are parsed using strict regex validation to prevent malicious injection.
+
+---
+
+## 📋 Changelog
+
+- **v1.2.0**: Refactored monolithic server layout into modular ES Module helper sub-services (`github.js`, `llm.js`, `geoip.js`, `logger.js`, `middleware.js`) and added integration test suites.
+- **v1.1.0**: Standardized structured logging with Winston and request correlation context.
+- **v1.0.0**: Initial release featuring Globe visualization and consolidated analysis templates pass.
 
 ---
 

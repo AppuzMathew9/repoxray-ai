@@ -22,7 +22,9 @@ import {
   sanitizeAnalysis
 } from './lib/llm.js';
 import {
-  cities,
+  cities
+} from './lib/geoip.js';
+import {
   fallbackPublicRepos
 } from './lib/globe.js';
 

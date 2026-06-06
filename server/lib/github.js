@@ -2,6 +2,23 @@ import axios from 'axios';
 import Boom from '@hapi/boom';
 import { logger } from './logger.js';
 
+// Caching layer to avoid repeating network requests to GitHub API
+const apiCache = new Map();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes cache TTL
+
+const getCached = (key) => {
+  const cached = apiCache.get(key);
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+    logger.info(`Serving GitHub API response from cache: ${key}`);
+    return cached.data;
+  }
+  return null;
+};
+
+const setCached = (key, data) => {
+  apiCache.set(key, { data, timestamp: Date.now() });
+};
+
 // GitHub API Headers helper
 const getGithubHeaders = () => {
   const token = process.env.GITHUB_TOKEN;
@@ -31,8 +48,13 @@ function parseGitHubUrl(repoUrl) {
 
 // Fetch Repository Metadata
 async function fetchRepoMetadata(owner, repo, headers) {
+  const cacheKey = `${owner}/${repo}:metadata`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
   try {
     const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}`, { headers, timeout: 12000 });
+    setCached(cacheKey, response.data);
     return response.data;
   } catch (err) {
     if (err.response && err.response.status === 404) {
@@ -44,12 +66,17 @@ async function fetchRepoMetadata(owner, repo, headers) {
 
 // Fetch README Content (truncated to 8000 chars to stay within model token limits)
 async function fetchReadme(owner, repo, headers) {
+  const cacheKey = `${owner}/${repo}:readme`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
   try {
     const readmeRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers, timeout: 12000 });
     if (readmeRes.data && readmeRes.data.content) {
       const fullReadme = Buffer.from(readmeRes.data.content, 'base64').toString('utf-8');
       let content = fullReadme.slice(0, 8000);
       if (fullReadme.length > 8000) content += '\n[README truncated for token limit]';
+      setCached(cacheKey, content);
       return content;
     }
   } catch (err) {
@@ -60,6 +87,10 @@ async function fetchReadme(owner, repo, headers) {
 
 // Fetch File Tree
 async function fetchFileTree(owner, repo, defaultBranch, headers) {
+  const cacheKey = `${owner}/${repo}:${defaultBranch || 'main'}:tree`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
   try {
     const treeRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch || 'main'}?recursive=1`, { headers, timeout: 12000 });
     const files = treeRes.data.tree || [];
@@ -67,7 +98,9 @@ async function fetchFileTree(owner, repo, defaultBranch, headers) {
       .filter(f => !f.path.includes('node_modules') && !f.path.includes('.git/') && !f.path.includes('.next/') && !f.path.includes('build/') && !f.path.includes('dist/'))
       .slice(0, 100); // Max 100 entries for context limit
 
-    return filteredFiles.map(f => `${f.type === 'tree' ? '[Dir]' : '[File]'} ${f.path}`).join('\n');
+    const treeStr = filteredFiles.map(f => `${f.type === 'tree' ? '[Dir]' : '[File]'} ${f.path}`).join('\n');
+    setCached(cacheKey, treeStr);
+    return treeStr;
   } catch (err) {
     logger.warn(`Failed to fetch tree structure for ${owner}/${repo}: ${err.message}`);
     return 'Unable to fetch file tree due to API restrictions.';
@@ -76,6 +109,10 @@ async function fetchFileTree(owner, repo, defaultBranch, headers) {
 
 // Fetch Key Source Files
 async function fetchSourceFiles(owner, repo, defaultBranch, headers) {
+  const cacheKey = `${owner}/${repo}:${defaultBranch || 'main'}:sourcefiles`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached;
+
   let sourceFilesStr = '';
   try {
     const treeRes = await axios.get(`https://api.github.com/repos/${owner}/${repo}/git/trees/${defaultBranch || 'main'}?recursive=1`, { headers, timeout: 12000 });
@@ -103,7 +140,9 @@ async function fetchSourceFiles(owner, repo, defaultBranch, headers) {
   } catch (err) {
     logger.warn(`Failed to fetch sample source files for ${owner}/${repo}: ${err.message}`);
   }
-  return sourceFilesStr || 'No key source files fetched.';
+  const result = sourceFilesStr || 'No key source files fetched.';
+  setCached(cacheKey, result);
+  return result;
 }
 
 export {
